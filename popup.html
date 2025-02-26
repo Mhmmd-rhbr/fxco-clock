@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Forex Market Time</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="title">Forex Time - <span id="timezone-display">Asia/Tehran</span></div>
+      <div class="nav-tabs">
+        <button class="nav-tab active" data-tab="main">Markets</button>
+        <button class="nav-tab" data-tab="settings">Settings</button>
+        <button class="nav-tab" data-tab="visualizer">Visualizer</button>
+      </div>
+    </div>
+    
+    <!-- Main Tab Content - Market Times -->
+    <div id="main-tab" class="tab-container active">
+      <div class="current-time" id="current-time">Tue, 25 Feb 2025 22:25:55 +0330</div>
+      
+      <div class="search-box">
+        <input type="text" id="market-search" placeholder="Search markets...">
+      </div>
+      
+      <table class="market-table">
+        <thead>
+          <tr>
+            <th>Market</th>
+            <th>Open</th>
+            <th>Close</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody id="market-table-body">
+          <!-- Market data will be inserted here with JavaScript -->
+        </tbody>
+      </table>
+      
+      <div class="simulate-time">
+        <div class="simulate-label">Simulate Time <span class="info-icon" title="Simulates a different time to check market status">ⓘ</span></div>
+        <div class="simulate-controls">
+          <input type="date" id="simulate-date">
+          <input type="time" id="simulate-time">
+          <button id="reset-simulation" class="reset-btn">Reset</button>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Settings Tab Content -->
+    <div id="settings-tab" class="tab-container">
+      <div class="settings-section">
+        <h3>Display Settings</h3>
+        
+        <div class="settings-group">
+          <label>Theme:</label>
+          <div class="button-group">
+            <button class="theme-btn" data-theme="light">Light</button>
+            <button class="theme-btn active" data-theme="dark">Dark</button>
+            <button class="theme-btn" data-theme="auto">Auto</button>
+          </div>
+        </div>
+        
+        <div class="settings-group">
+          <label>Timezone:</label>
+          <select id="timezone-select">
+            <option value="Asia/Tehran">Asia/Tehran</option>
+            <option value="Europe/London">Europe/London</option>
+            <option value="America/New_York">America/New_York</option>
+            <option value="Asia/Tokyo">Asia/Tokyo</option>
+            <option value="Australia/Sydney">Australia/Sydney</option>
+            <option value="Asia/Shanghai">Asia/Shanghai</option>
+            <option value="Asia/Hong_Kong">Asia/Hong_Kong</option>
+            <option value="Asia/Dubai">Asia/Dubai</option>
+            <option value="Europe/Frankfurt">Europe/Frankfurt</option>
+            <option value="Europe/Paris">Europe/Paris</option>
+            <option value="America/Chicago">America/Chicago</option>
+            <option value="America/Los_Angeles">America/Los_Angeles</option>
+            <option value="Asia/Singapore">Asia/Singapore</option>
+            <option value="Asia/Seoul">Asia/Seoul</option>
+          </select>
+        </div>
+        
+        <div class="settings-group">
+          <label>Clock Format:</label>
+          <input type="text" id="clock-format" value="ddd, D MMM YYYY HH:mm:ss z">
+          <div class="format-guide">
+            <p>Format tokens: D (day), M (month), Y (year), H (hour), m (minute), s (second), z (timezone)</p>
+          </div>
+        </div>
+        
+        <div class="settings-group">
+          <label>Market Hours Format:</label>
+          <div class="button-group">
+            <button class="hours-btn active" data-hours="24h">24H</button>
+            <button class="hours-btn" data-hours="12h">12H</button>
+            <button class="hours-btn" data-hours="custom">Custom</button>
+          </div>
+        </div>
+      </div>
+      
+      <div class="settings-section">
+        <h3>Market Settings</h3>
+        
+        <div class="settings-group">
+          <label>Market Mode:</label>
+          <div class="button-group mode-group">
+            <button class="mode-btn active" data-mode="exchanges">Stock Exchanges</button>
+            <button class="mode-btn" data-mode="standard">8 AM to 5 PM</button>
+          </div>
+        </div>
+        
+        <div class="settings-group">
+          <label>Markets to Display:</label>
+          <button id="select-all-markets" class="small-btn">Select All</button>
+          <button id="deselect-all-markets" class="small-btn">Deselect All</button>
+          
+          <div class="markets-grid">
+            <div class="market-checkbox">
+              <input type="checkbox" id="sydney" checked>
+              <label for="sydney">Sydney</label>
+            </div>
+            <div class="market-checkbox">
+              <input type="checkbox" id="tokyo" checked>
+              <label for="tokyo">Tokyo</label>
+            </div>
+            <div class="market-checkbox">
+              <input type="checkbox" id="shanghai" checked>
+              <label for="shanghai">Shanghai</label>
+            </div>
+            <div class="market-checkbox">
+              <input type="checkbox" id="hong-kong" checked>
+              <label for="hong-kong">Hong Kong</label>
+            </div>
+            <div class="market-checkbox">
+              <input type="checkbox" id="mumbai" checked>
+              <label for="mumbai">Mumbai</label>
+            </div>
+            <div class="market-checkbox">
+              <input type="checkbox" id="frankfurt" checked>
+              <label for="frankfurt">Frankfurt</label>
+            </div>
+            <div class="market-checkbox">
+              <input type="checkbox" id="london" checked>
+              <label for="london">London</label>
+            </div>
+            <div class="market-checkbox">
+              <input type="checkbox" id="new-york" checked>
+              <label for="new-york">New York</label>
+            </div>
+            <div class="market-checkbox">
+              <input type="checkbox" id="chicago">
+              <label for="chicago">Chicago</label>
+            </div>
+            <div class="market-checkbox">
+              <input type="checkbox" id="toronto">
+              <label for="toronto">Toronto</label>
+            </div>
+            <div class="market-checkbox">
+              <input type="checkbox" id="singapore">
+              <label for="singapore">Singapore</label>
+            </div>
+            <div class="market-checkbox">
+              <input type="checkbox" id="sydney-futures">
+              <label for="sydney-futures">Sydney Futures</label>
+            </div>
+          </div>
+        </div>
+        
+        <div class="settings-group">
+          <label>Notifications:</label>
+          <div class="notification-options">
+            <div class="notification-option">
+              <input type="checkbox" id="notify-market-open">
+              <label for="notify-market-open">Notify when markets open</label>
+            </div>
+            <div class="notification-option">
+              <input type="checkbox" id="notify-market-close">
+              <label for="notify-market-close">Notify when markets close</label>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="settings-actions">
+        <button id="save-settings" class="save-btn">Save Settings</button>
+        <button id="discard-settings" class="discard-btn">Discard Changes</button>
+        <button id="default-settings" class="default-btn">Reset to Defaults</button>
+      </div>
+    </div>
+    
+    <!-- Visualizer Tab Content -->
+    <div id="visualizer-tab" class="tab-container">
+      <div class="visualizer-header">
+        <h3>24-Hour Market Timeline</h3>
+        <div class="current-time-marker">Current time: <span id="visualizer-time">22:25 UTC+3:30</span></div>
+      </div>
+      
+      <div class="timeline-container">
+        <div class="timeline-hours">
+          <div class="hour-marker" data-hour="0">00:00</div>
+          <div class="hour-marker" data-hour="3">03:00</div>
+          <div class="hour-marker" data-hour="6">06:00</div>
+          <div class="hour-marker" data-hour="9">09:00</div>
+          <div class="hour-marker" data-hour="12">12:00</div>
+          <div class="hour-marker" data-hour="15">15:00</div>
+          <div class="hour-marker" data-hour="18">18:00</div>
+          <div class="hour-marker" data-hour="21">21:00</div>
+        </div>
+        
+        <div class="markets-timeline" id="markets-timeline">
+          <!-- Market timelines will be generated here -->
+        </div>
+        
+        <div class="current-time-line" id="timeline-current-marker"></div>
+      </div>
+      
+      <div class="overlap-analysis">
+        <h3>Market Overlap Analysis</h3>
+        <div class="overlap-chart" id="overlap-chart">
+          <!-- Overlap chart will be generated here -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
