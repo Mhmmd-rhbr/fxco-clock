@@ -1,29 +1,37 @@
 {
   "manifest_version": 3,
-  "name": "Forex Market Time Tracker",
-  "version": "1.0",
-  "description": "Track forex market opening and closing times across global financial centers",
+  "name": "AryamerX Financial Clock — Session Planner",
+  "version": "3.0.0",
+  "description": "Plan forex sessions, compare time zones, follow overlaps and set local reminders. Works offline. No account or data feeds.",
+  "minimum_chrome_version": "116",
   "author": "AryamerX",
   "icons": {
-    "16": "icons/icon16.png",
-    "48": "icons/icon48.png",
-    "128": "icons/icon128.png"
+    "16": "assets/logoamx.png",
+    "48": "assets/logoamx.png",
+    "128": "assets/logoamx.png"
   },
   "action": {
     "default_popup": "popup.html",
     "default_icon": {
-      "16": "icons/icon16.png",
-      "48": "icons/icon48.png",
-      "128": "icons/icon128.png"
+      "16": "assets/logoamx.png",
+      "48": "assets/logoamx.png",
+      "128": "assets/logoamx.png"
     },
-    "default_title": "Forex Market Time"
+    "default_title": "AryamerX Financial Clock"
   },
   "permissions": [
     "storage",
     "alarms",
-    "notifications"
+    "sidePanel"
   ],
+  "optional_permissions": ["notifications"],
+  "side_panel": { "default_path": "dashboard.html" },
+  "options_ui": { "page": "dashboard.html#settings", "open_in_tab": true },
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'none'; connect-src 'none'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; font-src 'self'; base-uri 'none'; form-action 'none'; frame-src 'none'"
+  },
   "background": {
-    "service_worker": "background.js"
+    "service_worker": "background.js",
+    "type": "module"
   }
 }

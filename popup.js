@@ -1,671 +1,205 @@
-// Market data with opening and closing times (24-hour format)
-const marketData = {
-  'Sydney': { open: '02:30', close: '08:30', timezoneName: 'Australia/Sydney' },
-  'Tokyo': { open: '03:30', close: '09:30', timezoneName: 'Asia/Tokyo' },
-  'Shanghai': { open: '05:00', close: '10:30', timezoneName: 'Asia/Shanghai' },
-  'Hong Kong': { open: '05:00', close: '11:30', timezoneName: 'Asia/Hong_Kong' },
-  'Mumbai': { open: '07:15', close: '13:30', timezoneName: 'Asia/Kolkata' },
-  'Frankfurt': { open: '11:30', close: '20:00', timezoneName: 'Europe/Berlin' },
-  'London': { open: '11:30', close: '20:00', timezoneName: 'Europe/London' },
-  'New York': { open: '18:00', close: '00:30', timezoneName: 'America/New_York' },
-  'Chicago': { open: '18:00', close: '00:30', timezoneName: 'America/Chicago' },
-  'Toronto': { open: '18:00', close: '00:30', timezoneName: 'America/Toronto' },
-  'Singapore': { open: '05:00', close: '12:00', timezoneName: 'Asia/Singapore' },
-  'Sydney Futures': { open: '01:00', close: '07:00', timezoneName: 'Australia/Sydney' }
+import { SESSIONS, zonedParts, dateKey, addDays, wallToInstant, getDayRange, intervalsForRange, sessionState, overlaps, nextEvents, getWeekBoundary, dstChanges, isValidZone } from './lib/engine.js';
+import { loadSettings, saveSettings, resetSettings, getSessions, STORAGE_KEY } from './lib/store.js';
+import { createCalendar } from './lib/calendar.js';
+
+const WORDS = {
+  overview:['Overview','نمای کلی'],planner:['My planner','برنامه من'],tools:['Time tools','ابزار زمان'],settings:['Settings','تنظیمات'],
+  offline:['Entirely offline','کاملاً آفلاین'],privacy:['Privacy','حریم خصوصی'],workspace:['Open workspace','صفحه کامل'],panel:['Open side panel','پنل کناری'],
+  nextMoment:['YOUR NEXT MARKET MOMENT','رویداد زمانی بعدی شما'],live:['Live','زنده'],simulation:['Time travel','شبیه‌سازی زمان'],backLive:['Back to live','بازگشت به اکنون'],
+  opens:['session begins','سشن آغاز می‌شود'],closes:['session ends','سشن پایان می‌یابد'],overlapStart:['overlap begins','هم‌پوشانی آغاز می‌شود'],overlapEnd:['overlap ends','هم‌پوشانی پایان می‌یابد'],
+  localTime:['Your local time','ساعت محلی شما'],sessions:['Global sessions','سشن‌های جهانی'],active:['Active','فعال'],inactive:['Upcoming','پیش رو'],activeCount:['active','فعال'],
+  until:['Until','تا'],starts:['Starts','شروع'],radar:['Session radar','رادار سشن‌ها'],today:['Today','امروز'],tomorrow:['Tomorrow','فردا'],nextWeek:['Next week','هفته بعد'],
+  overlap:['Overlap window','بازه هم‌پوشانی'],duration:['Duration','مدت'],savePlan:['Save to planner','ذخیره در برنامه'],remind:['Set reminder','تنظیم یادآور'],
+  reference:['Reference schedules · not live broker availability','برنامه مرجع سشن‌ها؛ وضعیت زنده بروکر نیست'],noSessions:['Choose a session in Settings to get started.','برای شروع، از تنظیمات یک سشن انتخاب کنید.'],
+  weekOpen:['Reference FX week is active','هفته مرجع فارکس فعال است'],weekClosed:['Between trading weeks','بین دو هفته معاملاتی'],nextWeekOpen:['Next weekly opening','شروع هفته بعد'],weeklyClose:['Weekly close','پایان هفته'],
+  weekHint:['Sunday 17:00 → Friday 17:00, New York. Your broker may differ.','مرجع: یکشنبه ۱۷ تا جمعه ۱۷ نیویورک؛ برنامه بروکر می‌تواند متفاوت باشد.'],
+  day:['Date','تاریخ'],time:['Time','ساعت'],apply:['Explore this time','بررسی این زمان'],timeHint:['Date and time use your selected time zone. Repeated DST times use the earlier occurrence.','تاریخ و ساعت در منطقه زمانی انتخابی شماست. ساعت تکراری DST، بار اول در نظر گرفته می‌شود.'],
+  invalidTime:['This local time does not exist because the clock changes. Choose another time.','این ساعت محلی به‌دلیل تغییر ساعت وجود ندارد؛ زمان دیگری انتخاب کنید.'],
+  saved:['Saved on this device','روی این دستگاه ذخیره شد'],saveError:['Could not save. Please try again.','ذخیره انجام نشد؛ دوباره تلاش کنید.'],copied:['Copied','کپی شد'],copyError:['Copy is unavailable in this browser context.','کپی در این محیط مرورگر در دسترس نیست.'],
+  planTitle:['Make time for your sessions.','برای سشن‌هایت وقت بساز.'],planSubtitle:['Match your availability with the sessions you follow.','ساعت‌های آزاد خود را با سشن‌های منتخب هماهنگ کن.'],
+  availability:['Your weekly availability','زمان آزاد هفتگی شما'],from:['From','از ساعت'],to:['To','تا ساعت'],save:['Save','ذخیره'],matches:['Your next 7 days','هفت روز آینده شما'],
+  noMatches:['No matching windows. Adjust your availability or selected sessions.','بازه مشترکی پیدا نشد؛ ساعت آزاد یا سشن‌های منتخب را تغییر دهید.'],
+  plans:['Saved plans','برنامه‌های ذخیره‌شده'],noPlans:['Choose a window below or create your own plan.','یک بازه انتخاب کنید یا برنامه دلخواه بسازید.'],newPlan:['Create a plan','ساخت برنامه'],title:['Title','عنوان'],endDate:['End date','تاریخ پایان'],startDate:['Start date','تاریخ شروع'],startTime:['Start time','ساعت شروع'],endTime:['End time','ساعت پایان'],
+  invalidRange:['End must be after start and within 31 days.','پایان باید بعد از شروع و حداکثر تا ۳۱ روز باشد.'],remove:['Remove','حذف'],export:['Calendar file','فایل تقویم'],copy:['Copy times','کپی ساعت‌ها'],exportAll:['Export plans','خروجی برنامه‌ها'],
+  routine:['Session preparation','آماده‌سازی سشن'],routineHint:['A short checklist for the session ahead. Stored only here.','چک‌لیستی کوتاه برای سشن پیش رو؛ فقط روی همین دستگاه.'],addItem:['Add an item','افزودن مورد'],add:['Add','افزودن'],resetChecks:['Uncheck all','برداشتن تیک‌ها'],
+  notes:['Preparation note','یادداشت آماده‌سازی'],notesPlaceholder:['What would you like to remember before your session?','پیش از سشن چه چیزی را می‌خواهید به یاد داشته باشید؟'],
+  converter:['One moment, different cities','یک لحظه، چند شهر'],dst:['Daylight-saving watch','نگهبان تغییر ساعت'],dstHint:['Upcoming clock changes and their effect on session start times in your time zone.','تغییر ساعت‌های آینده و اثر آن بر زمان شروع سشن در منطقه زمانی شما.'],noDst:['No clock change for selected sessions in the next 100 days.','در ۱۰۰ روز آینده تغییر ساعتی برای سشن‌های منتخب نیست.'],
+  custom:['Your custom schedules','برنامه‌های زمانی دلخواه'],customHint:['Days refer to the day a session starts. Overnight schedules are supported.','روزها، روز شروع سشن هستند. بازه عبوری از نیمه‌شب پشتیبانی می‌شود.'],name:['Name','نام'],zone:['Time zone','منطقه زمانی'],openTime:['Opening time','ساعت آغاز'],closeTime:['Closing time','ساعت پایان'],
+  invalidZone:['Enter a valid time-zone name, such as Europe/London.','یک منطقه زمانی معتبر مانند Europe/London وارد کنید.'],
+  broker:['Broker clock & rollover','ساعت بروکر و وقفه روزانه'],brokerHint:['A manual schedule, not a connection to your account. Default days are Sunday–Thursday opening days.','برنامه دستی است و به حساب وصل نمی‌شود. روزهای پیش‌فرض، شروع سشن از یکشنبه تا پنجشنبه‌اند.'],brokerEnable:['Show broker schedule','نمایش برنامه بروکر'],brokerName:['Broker label','نام نمایشی بروکر'],rolloverStart:['Break starts','شروع وقفه'],rolloverEnd:['Break ends','پایان وقفه'],
+  appearance:['Make it yours','مطابق سلیقه شما'],theme:['Appearance','ظاهر'],dark:['Midnight','نیمه‌شب'],light:['Linen','کتانی روشن'],auto:['System','سیستم'],language:['Language','زبان'],hour12:['12-hour time','قالب ۱۲ ساعته'],badge:['Toolbar status badge','نشانگر روی آیکن'],badgeHint:['Active session count; minutes to the next session when none are active.','تعداد سشن فعال؛ هنگام بسته‌بودن همه، دقیقه تا سشن بعدی.'],
+  selectSessions:['Sessions to follow','سشن‌های منتخب'],pair:['Currency focus','تمرکز جفت‌ارز'],allPairs:['All sessions','همه سشن‌ها'],pairHint:['An educational time filter. It does not measure live volume, volatility or trading opportunities.','فیلتر آموزشی زمان است؛ حجم، نوسان یا فرصت معاملاتی زنده را اندازه نمی‌گیرد.'],
+  overlapPair:['Compare sessions','مقایسه سشن‌ها'],alerts:['Your reminder preferences','تنظیم یادآورها'],enableAlerts:['Enable notifications','فعال‌کردن اعلان‌ها'],alertHint:['Optional. Delivered by Chrome; sleep and a closed browser can delay reminders.','اختیاری؛ از طریق کروم ارسال می‌شود. خواب دستگاه یا بسته‌بودن مرورگر بر اعلان اثر دارد.'],
+  lead:['Minutes before event','چند دقیقه پیش از رویداد'],openAlert:['Session starts','آغاز سشن'],closeAlert:['Session ends','پایان سشن'],overlapAlert:['Overlap starts','آغاز هم‌پوشانی'],quiet:['Quiet hours','ساعت‌های سکوت'],quietHint:['Uses your selected time zone. Equal start and end means no quiet period.','در منطقه زمانی انتخابی شما؛ شروع و پایان برابر یعنی بدون بازه سکوت.'],
+  permissionDenied:['Notifications were not allowed. You can enable them later in Chrome.','اجازه اعلان داده نشد؛ می‌توانید بعداً در کروم فعال کنید.'],previewNotice:['Preview mode. Local browser storage is used; extension-only controls require installation in Chrome.','حالت پیش‌نمایش؛ ذخیره محلی مرورگر فعال است. پنل کناری، اعلان و نشانگر پس از نصب در کروم کار می‌کنند.'],
+  data:['Your data stays with you','کنترل داده با شماست'],dataHint:['No accounts, analytics, remote code or data feeds. Everything runs locally.','بدون حساب، تحلیل‌گر رفتار، کد راه دور یا خوراک داده؛ همه‌چیز محلی اجرا می‌شود.'],erase:['Erase local data','پاک‌کردن داده محلی'],eraseConfirm:['Erase all local plans, notes, custom schedules and preferences? This cannot be undone. Old Chrome Sync copies are not deleted.','همه برنامه‌ها، یادداشت‌ها، سشن‌های دلخواه و تنظیمات محلی پاک شوند؟ این کار قابل بازگشت نیست. نسخه‌های قدیمی Chrome Sync پاک نمی‌شوند.'],
+  sources:['About these schedules','درباره این ساعت‌ها'],sourceCopy:['Built-in sessions use common local-time conventions: Sydney 08–17, Tokyo 09–18, Frankfurt/London/New York 08–17, weekdays. They are clipped to the reference FX week. These are planning windows, not exchange hours, holiday calendars or live broker status.','سشن‌های مرجع در روزهای کاری، به وقت محلی‌اند: سیدنی ۸–۱۷، توکیو ۹–۱۸، فرانکفورت، لندن و نیویورک ۸–۱۷؛ به هفته مرجع فارکس محدود می‌شوند. این بازه‌ها برای برنامه‌ریزی‌اند و ساعت رسمی بورس، تقویم تعطیلات یا وضعیت زنده بروکر نیستند.'],
+  sourceClock:['Calculations use your device clock and Chrome’s time-zone rules. No online time service is contacted.','محاسبات بر پایه ساعت دستگاه و قواعد منطقه زمانی کروم است؛ به سرویس ساعت آنلاین وصل نمی‌شود.'],visitBrand:['Explore AryamerX','سایت آریامرکس'],hours:['hours','ساعت'],minutes:['min','دقیقه'],days:['Days','روزها'],past:['Past','گذشته'],future:['Upcoming','پیش رو'],none:['No event','بدون رویداد'],manage:['Manage','مدیریت'],savedPlan:['Session window','بازه سشن'],limit:['The local item limit has been reached. Remove an older item first.','ظرفیت داده محلی تکمیل است؛ ابتدا یک مورد قدیمی را حذف کنید.'],
+  brokerBreak:['Configured daily break','وقفه روزانه تنظیم‌شده'],breakNote:['Only your manual schedule is shown. Check it against your broker’s published hours.','فقط برنامه دستی شما نمایش داده می‌شود؛ با ساعت اعلام‌شده بروکر تطبیق دهید.'],
+  alertPlan:['Remind me before this plan','یادآوری پیش از این برنامه'],quickPlan:['Custom session plan','برنامه دلخواه سشن'],liveOnly:['Return to live time before enabling a reminder.','برای فعال‌کردن یادآور، به زمان زنده برگردید.'],
 };
-
-// Default settings
-const defaultSettings = {
-  theme: 'dark',
-  timezone: 'Asia/Tehran',
-  clockFormat: 'ddd, D MMM YYYY HH:mm:ss z',
-  marketHoursFormat: '24h',
-  marketMode: 'exchanges',
-  selectedMarkets: ['Sydney', 'Tokyo', 'Shanghai', 'Hong Kong', 'Mumbai', 'Frankfurt', 'London', 'New York'],
-  notifications: {
-    marketOpen: false,
-    marketClose: false
+const NAMES = {sydney:['Sydney','سیدنی'],tokyo:['Tokyo','توکیو'],frankfurt:['Frankfurt','فرانکفورت'],london:['London','لندن'],'new-york':['New York','نیویورک']};
+const DAY_NAMES = [['Sun','یک'],['Mon','دو'],['Tue','سه'],['Wed','چهار'],['Thu','پنج'],['Fri','جمعه'],['Sat','شنبه']];
+const PAIRS = {ALL:null,EURUSD:['london','new-york','frankfurt'],GBPUSD:['london','new-york'],USDJPY:['tokyo','new-york'],AUDUSD:['sydney','new-york'],EURJPY:['london','tokyo','frankfurt'],GBPJPY:['london','tokyo'],AUDJPY:['sydney','tokyo'],USDCAD:['new-york']};
+const PATHS = {clock:'M12 8v4l3 2 M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0',radar:'M12 3a9 9 0 1 0 9 9 M12 7a5 5 0 1 0 5 5 M12 12l7-7 M12 11v2',calendar:'M7 3v4 M17 3v4 M3 10h18 M5 5h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2 M7 14h3 M7 17h6',tools:'M4 8h16 M8 4v8 M4 17h16 M16 13v8',settings:'M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8 M9 3l-1 3-3 1-2 3 2 2-1 3 3 2 1 3h4l1-3 3-1 2-3-2-2 1-3-3-2-1-3z',arrow:'M5 12h14 M14 7l5 5-5 5',bell:'M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9 M10 21h4',plus:'M12 5v14 M5 12h14',download:'M12 3v12 M7 10l5 5 5-5 M4 16v5h16v-5',moon:'M21 13a9 9 0 0 1-10-10 9 9 0 1 0 10 10',sun:'M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8 M12 2v2 M12 20v2 M2 12h2 M20 12h2 M5 5l1 1 M18 18l1 1 M19 5l-1 1 M6 18l-1 1',check:'M5 12l4 4L19 6',close:'M6 6l12 12 M6 18L18 6',globe:'M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0 M3 12h18 M12 3c-5 5-5 13 0 18 5-5 5-13 0-18',copy:'M9 8h11v13H9z M5 16H3V3h11v2',panel:'M3 4h18v16H3z M14 4v16 M17 8h1 M17 11h1',shield:'M12 3l8 3v6c0 5-8 9-8 9s-8-4-8-9V6z M8 12l3 3 5-6',external:'M14 3h7v7 M21 3l-11 11 M10 3H3v18h18v-7',reset:'M3 11a9 9 0 1 1 2 7 M3 4v7h7'};
+let settings, currentWindowId, uid=0, toastTimer, lastMinute=-1, dstCache={key:'',value:[]}, mutationQueue=Promise.resolve(), pendingWrites=0;
+const ui = {tab:['planner','tools','settings'].includes(location.hash.slice(1))?location.hash.slice(1):'overview',simulation:null,radarHours:24};
+const isExtension = !!globalThis.chrome?.runtime?.id;
+const isPopup = document.body.dataset.surface==='popup';
+const T = key => WORDS[key]?.[settings?.language==='fa'?1:0] ?? key;
+const name = session => NAMES[typeof session==='string'?session:session.id]?.[settings.language==='fa'?1:0] || (typeof session==='string'?session:session.name);
+const locale = () => settings.language==='fa'?'fa-IR-u-ca-gregory':'en-GB';
+const now = () => ui.simulation ?? Date.now();
+const id = prefix => `${prefix}-${++uid}`;
+const h = (tag,props={},...children) => {
+  const el=document.createElement(tag);
+  for(const [key,value] of Object.entries(props)) {
+    if(value===undefined||value===null||(value===false&&!key.startsWith('aria-'))) continue;
+    if(key.startsWith('on')) el.addEventListener(key.slice(2),value);
+    else if(key==='class') el.className=value;
+    else if(key==='checked'||key==='disabled'||key==='value') el[key]=value;
+    else el.setAttribute(key,key.startsWith('aria-')?String(value):value===true?'':String(value));
   }
+  for(const child of children.flat(Infinity)) if(child!==null&&child!==undefined&&child!==false) el.append(child instanceof Node?child:document.createTextNode(String(child)));
+  return el;
 };
-
-// Current settings initialized with defaults
-let currentSettings = { ...defaultSettings };
-
-// Current simulation time (null means using real time)
-let simulationTime = null;
-
-// Initialize DOM elements
-document.addEventListener('DOMContentLoaded', () => {
-  // Load saved settings
-  loadSettings();
-  
-  // Initialize UI
-  initializeUI();
-  
-  // Set up event listeners
-  setupEventListeners();
-  
-  // Start the clock
-  updateClock();
-  setInterval(updateClock, 1000);
-  
-  // Update market status table
-  updateMarketTable();
-  
-  // Update visualizer
-  updateVisualizer();
-  
-  // Update every minute for visualizer
-  setInterval(updateVisualizer, 60000);
-});
-
-// Load settings from Chrome storage
-function loadSettings() {
-  chrome.storage.sync.get(['forexTimeSettings'], (result) => {
-    if (result.forexTimeSettings) {
-      currentSettings = { ...defaultSettings, ...result.forexTimeSettings };
-    }
-    
-    // Apply settings to UI
-    applySettings();
-  });
+function icon(type,size=16){const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');for(const [k,v] of Object.entries({viewBox:'0 0 24 24',width:size,height:size,fill:'none',stroke:'currentColor','stroke-width':1.5,'stroke-linecap':'round','stroke-linejoin':'round','aria-hidden':'true'}))svg.setAttribute(k,v);const p=document.createElementNS(svg.namespaceURI,'path');p.setAttribute('d',PATHS[type]||PATHS.clock);svg.append(p);return svg;}
+const btn=(label,action,kind='',symbol=null,props={})=>h('button',{type:'button',class:`button ${kind}`,onclick:action,...props},symbol?icon(symbol,14):null,label);
+const iconBtn=(label,symbol,action)=>h('button',{type:'button',class:'icon-button',title:label,'aria-label':label,onclick:action},icon(symbol));
+function toast(message){const el=document.getElementById('toast');el.textContent=message;el.classList.add('visible');clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove('visible'),2600);}
+const time=(at,zone=settings.timezone)=>new Intl.DateTimeFormat(locale(),{timeZone:zone,hour:'2-digit',minute:'2-digit',hour12:settings.hour12}).format(at);
+const day=(at,options={})=>new Intl.DateTimeFormat(locale(),{timeZone:settings.timezone,weekday:'short',day:'numeric',month:'short',...options}).format(at);
+const range=(start,end)=>`${time(start)} – ${time(end)}`;
+const duration=ms=>{const minutes=Math.max(0,Math.round(ms/60000));const hours=Math.floor(minutes/60);return `${hours?`${hours} ${T('hours')} `:''}${minutes%60||!hours?`${minutes%60} ${T('minutes')}`:''}`.trim();};
+const countdown=ms=>{const sec=Math.max(0,Math.ceil(ms/1000));const hrs=Math.floor(sec/3600);return `${String(hrs).padStart(2,'0')}:${String(Math.floor(sec/60)%60).padStart(2,'0')}:${String(sec%60).padStart(2,'0')}`;};
+const allSessions=()=>getSessions(settings);
+const visibleSessions=()=>{const sessions=allSessions();const filter=PAIRS[settings.pair];return filter?sessions.filter(s=>s.custom||s.id==='broker'||filter.includes(s.id)):sessions;};
+function sessionNames(ids){return ids.map(sid=>name(allSessions().find(s=>s.id===sid)||sid)).join(' + ');}
+function eventTitle(event){return `${sessionNames(event.sessionIds)} · ${T({open:'opens',close:'closes','overlap-start':'overlapStart','overlap-end':'overlapEnd'}[event.kind])}`;}
+function commit(change,rerender=true){pendingWrites++;const task=mutationQueue.then(async()=>{try{const draft=structuredClone(settings);change(draft);settings=await saveSettings(draft);if(isExtension)chrome.runtime.sendMessage({type:'refresh'}).catch(()=>{});if(rerender)render();return true;}catch(error){console.error('Local save failed',error);toast(T('saveError'));return false;}finally{pendingWrites--;}});mutationQueue=task.catch(()=>{});return task;}
+function eraseLocalData(){pendingWrites++;const task=mutationQueue.then(async()=>{const root=document.getElementById('app');root.inert=true;try{settings=await resetSettings();ui.simulation=null;render();toast(T('saved'));}catch{toast(T('saveError'));}finally{root.inert=false;pendingWrites--;}});mutationQueue=task.catch(()=>{});return task;}
+function field(label,props={}){const key=id('field');const input=h(props.multiline?'textarea':'input',{id:key,'data-focus-key':label,...(props.type==='date'?{min:'2000-01-01',max:'2100-12-31'}:{}),...props});const node=h('div',{class:'field'},h('label',{for:key},label),input);return {node,input};}
+function selectField(label,choices,value,onchange){const key=id('select');const input=h('select',{id:key,'data-focus-key':label,onchange},choices.map(choice=>{const [v,l]=Array.isArray(choice)?choice:[choice,choice];return h('option',{value:v},l);}));input.value=value;return {node:h('div',{class:'field'},h('label',{for:key},label),input),input};}
+function toggle(label,description,checked,onchange){const key=id('switch');return h('label',{class:'switch-row',for:key},h('span',{},h('span',{class:'switch-copy'},label),description?h('span',{class:'switch-description',style:'display:block'},description):null),h('input',{type:'checkbox',id:key,'data-focus-key':label,class:'switch',role:'switch',checked,onchange}));}
+function focusSnapshot(){const el=document.activeElement;if(!document.getElementById('app').contains(el))return null;return {key:el.dataset.focusKey,aria:el.getAttribute('aria-label'),id:el.id.startsWith('tab-')?el.id:null,tag:el.tagName,text:el.tagName==='BUTTON'?el.textContent:null,start:el.selectionStart,end:el.selectionEnd};}
+function restoreFocus(saved){if(!saved)return;const matches=Array.from(document.querySelectorAll('#app button,#app input,#app select,#app textarea'));const el=matches.find(x=>x.tagName===saved.tag&&(saved.id?x.id===saved.id:saved.key?x.dataset.focusKey===saved.key:saved.aria?x.getAttribute('aria-label')===saved.aria:saved.text&&x.textContent===saved.text));if(el){el.focus({preventScroll:true});if(typeof saved.start==='number'&&['text','search'].includes(el.type))el.setSelectionRange(saved.start,saved.end);}}
+function daysPicker(selected,onchange){const days=[...selected];return h('div',{class:'days',role:'group','aria-label':T('days')},[1,2,3,4,5,6,0].map(index=>h('button',{type:'button',class:'day-button','aria-label':new Intl.DateTimeFormat(locale(),{weekday:'long',timeZone:'UTC'}).format(Date.UTC(2026,10,15+index)),'aria-pressed':days.includes(index),onclick:event=>{const at=days.indexOf(index);at>=0?days.splice(at,1):days.push(index);event.currentTarget.setAttribute('aria-pressed',String(days.includes(index)));onchange([...days]);}},DAY_NAMES[index][settings.language==='fa'?1:0])));}
+const card=(title,symbol,...contents)=>h('section',{class:'card'},h('div',{class:'card-heading'},h('h2',{},icon(symbol),title)),...contents);
+function empty(message){return h('div',{class:'empty'},icon('calendar',24),message);}
+function zones(){const common=['Asia/Tehran','Europe/London','America/New_York','Europe/Berlin','Australia/Sydney','Asia/Tokyo','Asia/Dubai','Asia/Kolkata','Asia/Kathmandu','UTC'];let rest=[];try{rest=Intl.supportedValuesOf('timeZone');}catch{}return [...new Set([settings.timezone,...common,...rest])];}
+async function openWorkspace(tab='overview'){const target=`dashboard.html#${typeof tab==='string'?tab:'overview'}`;if(isExtension){await chrome.tabs.create({url:chrome.runtime.getURL(target)});if(isPopup)window.close();}else window.open(target,'_blank','noopener');}
+function openPanel(){if(!isExtension){toast(T('previewNotice'));return;}if(currentWindowId===undefined){toast(T('saveError'));return;}chrome.sidePanel.open({windowId:currentWindowId}).then(()=>{if(isPopup)window.close();}).catch(()=>toast(T('saveError')));}
+function render(){
+  const previousFocus=focusSnapshot();
+  document.documentElement.lang=settings.language;document.documentElement.dir=settings.language==='fa'?'rtl':'ltr';
+  const dark=settings.theme==='dark'||settings.theme==='auto'&&matchMedia('(prefers-color-scheme: dark)').matches;document.documentElement.dataset.theme=dark?'dark':'light';
+  const root=document.getElementById('app');const shell=h('div',{class:'app-shell'});
+  const brand=h('div',{class:'brand'},h('img',{src:'assets/logoamx.png',alt:'',width:39,height:39}),h('div',{},h('div',{class:'brand-name'},'Arya',h('span',{},'merX')),h('div',{class:'brand-sub'},'FINANCIAL CLOCK')));
+  const actions=h('div',{class:'top-actions'},h('span',{class:'version'},'3.0'),h('button',{type:'button',class:'icon-button language-button','aria-label':settings.language==='fa'?'Switch to English':'تغییر زبان به فارسی',onclick:()=>commit(s=>s.language=s.language==='fa'?'en':'fa')},settings.language==='fa'?'EN':'فا'),iconBtn(T('panel'),'panel',openPanel),iconBtn(T('workspace'),'external',openWorkspace));
+  shell.append(h('header',{class:'topbar'},brand,actions));
+  const nav=h('nav',{class:'navigation',role:'tablist','aria-label':'Financial Clock'});
+  for(const tab of ['overview','planner','tools','settings'])nav.append(h('button',{id:`tab-${tab}`,type:'button',class:'nav-button',role:'tab','aria-controls':`page-${tab}`,'aria-selected':ui.tab===tab,tabindex:ui.tab===tab?0:-1,onclick:()=>setTab(tab),onkeydown:event=>{if(!['ArrowLeft','ArrowRight','Home','End'].includes(event.key))return;event.preventDefault();const tabs=['overview','planner','tools','settings'];let pos=tabs.indexOf(tab);if(event.key==='Home')pos=0;else if(event.key==='End')pos=3;else pos=(pos+(event.key==='ArrowRight'?1:3))%4;setTab(tabs[pos]);document.getElementById(`tab-${tabs[pos]}`).focus();}},icon({overview:'radar',planner:'calendar',tools:'tools',settings:'settings'}[tab],14),T(tab)));
+  if(!isPopup)shell.append(nav);const main=h('main',{id:`page-${ui.tab}`,role:isPopup?'region':'tabpanel','aria-label':isPopup?T('overview'):undefined,'aria-labelledby':isPopup?undefined:`tab-${ui.tab}`});
+  if(ui.simulation!==null)main.append(h('div',{class:'simulation-banner'},h('span',{},T('simulation'),' · ',day(now()),' ',time(now())),btn(T('backLive'),()=>{ui.simulation=null;render();},'button-quiet button-small','reset')));
+  main.append(({overview:renderOverview,planner:renderPlanner,tools:renderTools,settings:renderSettings}[ui.tab])());
+  shell.append(main,h('footer',{class:'app-footer'},h('span',{class:'offline'},icon('shield',12),T('offline')),h('span',{class:'footer-links'},h('span',{},'AryamerX / 03'),h('a',{href:'privacy.html',target:'_blank',rel:'noopener'},T('privacy')))));
+  root.replaceChildren(shell);tick();restoreFocus(previousFocus);
+}
+function setTab(tab){if(isPopup){openWorkspace(tab);return;}ui.tab=tab;history.replaceState(null,'',`#${tab}`);render();window.scrollTo({top:0,behavior:'instant'});}
+function tick(){const at=now();for(const el of document.querySelectorAll('[data-clock-zone]'))el.textContent=time(at,el.dataset.clockZone);for(const el of document.querySelectorAll('[data-countdown]'))el.textContent=countdown(Number(el.dataset.countdown)-at);}
+function bestNext(sessions,at){return nextEvents(sessions,at,8).find(event=>event.kind==='open'||event.kind==='close'||(event.sessionIds.length===2&&settings.overlapPair.every(sid=>event.sessionIds.includes(sid))))||null;}
+function renderOverview(){
+  const at=now(),sessions=visibleSessions(),event=bestNext(sessions,at);const left=h('div',{class:'stack'}),right=h('div',{class:'stack'});
+  const hero=h('section',{class:'hero'},h('div',{class:'hero-top'},h('span',{class:'eyebrow'},T('nextMoment')),h('span',{class:'live-pill'},h('i',{class:'dot'}),T(ui.simulation===null?'live':'simulation'))),h('h1',{class:'hero-event'},event?eventTitle(event):T('noSessions')),h('div',{class:'countdown','data-countdown':event?.at??at,'aria-label':event?duration(event.at-at):T('none')},countdown((event?.at??at)-at)),h('div',{class:'hero-bottom'},h('span',{class:'hero-meta'},event?`${day(event.at)} · ${time(event.at)}`:'—'),event?btn(T('remind'),()=>{if(ui.simulation!==null){toast(T('liveOnly'));return;}setTab('settings');document.getElementById('reminders')?.scrollIntoView();},'button-quiet','bell'):null),h('div',{class:'orbital','aria-hidden':true},icon('clock',24)));
+  left.append(hero,h('div',{class:'time-strip'},h('div',{},h('span',{class:'date-label'},day(at)),h('div',{class:'local-time','data-clock-zone':settings.timezone},time(at))),h('div',{class:'timezone-label'},T('localTime'),h('br'),settings.timezone)));
+  const active=sessions.filter(s=>sessionState(s,at).active).length;
+  const sessionSection=h('section',{},h('div',{class:'section-label'},h('h2',{},T('sessions')),h('span',{class:'pill'},h('i',{class:'dot'}),`${active} ${T('activeCount')}`)));
+  const grid=h('div',{class:'session-grid'});for(const s of (isPopup?[...sessions].sort((a,b)=>Number(sessionState(b,at).active)-Number(sessionState(a,at).active)).slice(0,4):sessions)){const state=sessionState(s,at);grid.append(h('article',{class:`session-card ${state.active?'is-active':''}`,style:`--session-color:${s.color||'#a2d4e5'}`},h('div',{class:'session-top'},h('span',{class:'session-name'},name(s)),h('span',{class:'session-code'},s.id==='broker'?'BRK':s.id.slice(0,3).toUpperCase())),h('div',{class:'session-time','data-clock-zone':s.zone},time(at,s.zone)),h('div',{class:'session-bottom'},h('span',{class:state.active?'status-active':'status-muted'},state.active?T('active'):T('inactive')),h('span',{},state.active?(state.endsAt?`${T('until')} ${time(state.endsAt)}`:'24/7'):state.startsAt?`${dateKey(state.startsAt,settings.timezone)!==dateKey(at,settings.timezone)?day(state.startsAt)+' · ':T('starts')+' '}${time(state.startsAt)}`:'—'))));}sessionSection.append(sessions.length?grid:empty(T('noSessions')));left.append(sessionSection);
+  if(isPopup){left.append(btn(T('workspace'),()=>openWorkspace('overview'),'button-full','arrow'));return left;}
+  const date=dateKey(at,settings.timezone),dayRange=getDayRange(date,settings.timezone);const end=ui.radarHours===48?getDayRange(addDays(date,2),settings.timezone).start:dayRange.end;
+  const timeline=card(T('radar'),'radar');const switcher=h('div',{class:'segmented',style:'margin-bottom:12px'},[24,48].map(hours=>h('button',{type:'button',class:'segment','aria-pressed':ui.radarHours===hours,onclick:()=>{ui.radarHours=hours;render();}},`${hours}h`)));timeline.append(switcher,renderTimeline(sessions,dayRange.start,end,at),h('p',{class:'fine-print',style:'margin-top:11px'},T('reference')));right.append(timeline);
+  right.append(renderOverlap(sessions,at));
+  const week=getWeekBoundary(at);right.append(card(T(week.isOpen?'weekOpen':'weekClosed'),'globe',h('div',{class:'stat-row'},h('div',{class:'stat'},h('span',{},T(week.isOpen?'weeklyClose':'nextWeekOpen')),h('strong',{},day(week.isOpen?week.nextClose:week.nextOpen)),h('span',{},time(week.isOpen?week.nextClose:week.nextOpen)))),h('p',{class:'fine-print',style:'margin-top:10px'},T('weekHint'))));
+  if(settings.broker.enabled)right.append(h('div',{class:'notice'},icon('clock'),h('div',{},h('strong',{},settings.broker.name),h('p',{},`${T('brokerBreak')}: ${settings.broker.rolloverStart} – ${settings.broker.rolloverEnd} · ${settings.broker.zone}`),h('p',{class:'fine-print'},T('breakNote')))));
+  if(settings.pair!=='ALL')left.append(h('p',{class:'pair-note'},settings.pair,' · ',T('pairHint')));
+  return h('div',{class:'overview-layout'},left,right);
+}
+function renderTimeline(sessions,start,end,at){const total=end-start,intervals=intervalsForRange(sessions,start,end);const chart=h('div',{class:'timeline',role:'group','aria-label':`${T('radar')} · ${day(start)} · ${settings.timezone}`});chart.append(h('div',{class:'timeline-labels'},[0,.25,.5,.75,1].map(p=>h('span',{},time(start+p*total)))));for(const session of sessions){const track=h('div',{class:'timeline-track'});for(const interval of intervals.filter(x=>x.sessionId===session.id)){const left=(Math.max(interval.start,start)-start)/total*100,width=(Math.min(interval.end,end)-Math.max(interval.start,start))/total*100;track.append(h('div',{class:'timeline-segment',title:`${name(session)} · ${day(interval.start)} ${range(interval.start,interval.end)}`,style:`left:${left}%;width:${width}%;--session-color:${session.color||'#a2d4e5'}`}));}if(at>=start&&at<end)track.append(h('span',{class:'timeline-now',style:`left:${(at-start)/total*100}%`}));chart.append(h('div',{class:'timeline-row'},h('span',{class:'timeline-name'},name(session)),track));}chart.append(h('div',{class:'timeline-note'},h('span',{},day(start)),h('span',{},settings.timezone)),h('details',{class:'timeline-description'},h('summary',{},T('sessions')),intervals.map(interval=>h('p',{},sessionNames([interval.sessionId]),' · ',day(interval.start),' ',time(interval.start),' → ',day(interval.end),' ',time(interval.end)))));return chart;}
+function renderOverlap(sessions,at){
+  const box=card(T('overlap'),'radar');
+  if(sessions.length<2){box.append(h('p',{class:'fine-print'},T('noMatches')));return box;}
+  const change=(index,value)=>{if(!value)return;const pair=[...settings.overlapPair];pair[index]=value;const other=1-index;if(pair[other]===value||!sessions.some(s=>s.id===pair[other]))pair[other]=sessions.find(s=>s.id!==value).id;return commit(s=>s.overlapPair=pair);};
+  const choices=[['',T('selectSessions')],...sessions.map(s=>[s.id,name(s)])];
+  const first=selectField(T('sessions'),choices,settings.overlapPair[0],event=>change(0,event.target.value));
+  const second=selectField(T('overlapPair'),choices,settings.overlapPair[1],event=>change(1,event.target.value));
+  box.append(h('div',{class:'form-grid',style:'margin-bottom:14px'},first.node,second.node));
+  const ids=[...new Set(settings.overlapPair)];const matched=ids.length===2&&ids.every(sid=>sessions.some(s=>s.id===sid));
+  const window=matched?overlaps(intervalsForRange(sessions,at-86400000,at+8*86400000),ids).find(x=>x.end>at):null;
+  if(!window){box.append(h('p',{class:'fine-print'},T('noMatches')));return box;}
+  box.append(h('div',{class:'overlap-feature'},h('div',{class:'overlap-symbol','aria-hidden':true},h('i'),h('i')),h('div',{},h('div',{class:'overlap-title'},sessionNames(ids)),h('div',{class:'overlap-range'},`${day(window.start)} · ${range(window.start,window.end)} · ${duration(window.end-window.start)}`),h('div',{class:'overlap-actions'},btn(T('savePlan'),()=>addPlan(window.start,window.end,sessionNames(ids),ids),'button-small','plus'),btn(T('export'),()=>downloadPlans([{id:`overlap-${window.start}`,title:sessionNames(ids),...window}]),'button-quiet button-small','download')))));
+  return box;
 }
 
-// Save settings to Chrome storage
-function saveSettings() {
-  chrome.storage.sync.set({ forexTimeSettings: currentSettings }, () => {
-    console.log('Settings saved');
-    
-    // Show success message
-    const saveBtn = document.getElementById('save-settings');
-    const originalText = saveBtn.textContent;
-    saveBtn.textContent = '✓ Saved';
-    saveBtn.disabled = true;
-    
-    setTimeout(() => {
-      saveBtn.textContent = originalText;
-      saveBtn.disabled = false;
-    }, 2000);
-  });
+// Planner, tools and settings share the same offline schedule model.
+function matchingWindows(date){
+  const start=wallToInstant(date,settings.availability.start,settings.timezone),end=wallToInstant(settings.availability.end<=settings.availability.start?addDays(date,1):date,settings.availability.end,settings.timezone);
+  const intervals=intervalsForRange(visibleSessions(),start,end);const points=[...new Set([start,end,...intervals.flatMap(x=>[Math.max(start,x.start),Math.min(end,x.end)])])].sort((a,b)=>a-b);const result=[];
+  for(let i=0;i<points.length-1;i++){const a=points[i],b=points[i+1];const ids=[...new Set(intervals.filter(x=>x.start<=a&&x.end>=b).map(x=>x.sessionId))].sort();if(!ids.length||b<=now())continue;const previous=result.at(-1);if(previous&&previous.end===a&&previous.sessionIds.join()===ids.join())previous.end=b;else result.push({start:a,end:b,sessionIds:ids});}
+  return result.filter(x=>x.end-x.start>=5*60000);
 }
-
-// Apply current settings to UI
-function applySettings() {
-  // Apply theme
-  document.body.className = currentSettings.theme === 'light' ? 'light-theme' : '';
-  document.querySelectorAll('.theme-btn').forEach(btn => {
-    btn.classList.toggle('active', btn.dataset.theme === currentSettings.theme);
-  });
-  
-  // Apply timezone
-  document.getElementById('timezone-select').value = currentSettings.timezone;
-  document.getElementById('timezone-display').textContent = currentSettings.timezone;
-  
-  // Apply clock format
-  document.getElementById('clock-format').value = currentSettings.clockFormat;
-  
-  // Apply market hours format
-  document.querySelectorAll('.hours-btn').forEach(btn => {
-    btn.classList.toggle('active', btn.dataset.hours === currentSettings.marketHoursFormat);
-  });
-  
-  // Apply market mode
-  document.querySelectorAll('.mode-btn').forEach(btn => {
-    btn.classList.toggle('active', btn.dataset.mode === currentSettings.marketMode);
-  });
-  
-  // Apply selected markets
-  Object.keys(marketData).forEach(market => {
-    const id = market.toLowerCase().replace(/\s+/g, '-');
-    const checkbox = document.getElementById(id);
-    if (checkbox) {
-      checkbox.checked = currentSettings.selectedMarkets.includes(market);
-    }
-  });
-  
-  // Apply notification settings
-  if (currentSettings.notifications) {
-    document.getElementById('notify-market-open').checked = currentSettings.notifications.marketOpen;
-    document.getElementById('notify-market-close').checked = currentSettings.notifications.marketClose;
-  }
-  
-  // Update the table with new settings
-  updateMarketTable();
-  
-  // Update visualizer
-  updateVisualizer();
+function renderPlanner(){
+  const intro=h('div',{class:'page-title'},h('h1',{},T('planTitle')),h('p',{},T('planSubtitle'))),left=h('div',{class:'stack'}),right=h('div',{class:'stack'});
+  let selectedDays=[...settings.availability.days];const start=field(T('from'),{type:'time',value:settings.availability.start,required:true}),end=field(T('to'),{type:'time',value:settings.availability.end,required:true});
+  left.append(card(T('availability'),'calendar',h('form',{class:'form-stack',onsubmit:async event=>{event.preventDefault();if(await commit(s=>s.availability={days:selectedDays,start:start.input.value,end:end.input.value}))toast(T('saved'));}},daysPicker(selectedDays,value=>selectedDays=value),h('div',{class:'form-grid'},start.node,end.node),btn(T('save'),null,'','check',{type:'submit'}))));
+  const matches=card(T('matches'),'radar');let matchCount=0;const date=dateKey(now(),settings.timezone);
+  for(let i=0;i<7;i++){const key=addDays(date,i),midday=wallToInstant(key,'12:00',settings.timezone);if(!settings.availability.days.includes(zonedParts(midday,settings.timezone).weekday))continue;const windows=matchingWindows(key);if(!windows.length)continue;matchCount+=windows.length;matches.append(h('div',{class:'planner-day'},h('div',{class:'planner-date'},day(midday),h('span',{class:'muted'},`${windows.length}`)),windows.map(window=>h('div',{class:'slot'},h('div',{},h('div',{class:'slot-title'},range(window.start,window.end)),h('div',{class:'slot-sub'},sessionNames(window.sessionIds))),iconBtn(T('savePlan'),'plus',()=>addPlan(window.start,window.end,sessionNames(window.sessionIds),window.sessionIds))))));}
+  if(!matchCount)matches.append(empty(T('noMatches')));left.append(matches);
+  const plans=card(T('plans'),'calendar');if(settings.plans.length){plans.append(h('div',{class:'button-row',style:'margin-bottom:12px'},btn(T('exportAll'),()=>downloadPlans(settings.plans),'button-quiet button-small','download')),h('div',{class:'plan-list'},[...settings.plans].sort((a,b)=>a.start-b.start).map(plan=>h('article',{class:`plan-item ${plan.end<Date.now()?'is-past':''}`},h('div',{class:'plan-copy'},h('h3',{},plan.title),h('div',{class:'plan-date'},day(plan.start),' · ',range(plan.start,plan.end),dateKey(plan.start,settings.timezone)!==dateKey(plan.end,settings.timezone)?` · ${day(plan.end)}`:''),h('div',{class:'button-row'},btn(T('export'),()=>downloadPlans([plan]),'button-quiet button-small','download'),btn(T('copy'),()=>copyTimes(plan),'button-quiet button-small','copy'),btn(T('remind'),async()=>{let permission=true;if(!plan.remind)permission=await allowNotifications();if(permission)await commit(s=>{const current=s.plans.find(p=>p.id===plan.id);if(current){current.remind=!plan.remind;if(!plan.remind)s.alerts.enabled=true;}});},`button-quiet button-small ${plan.remind?'status-active':''}`,'bell',{'aria-pressed':plan.remind}))),h('div',{class:'plan-actions'},iconBtn(T('remove'),'close',()=>commit(s=>s.plans=s.plans.filter(p=>p.id!==plan.id))))))));}else plans.append(empty(T('noPlans')));right.append(plans,renderPlanForm(),renderChecklist());
+  return h('div',{},intro,h('div',{class:'wide-layout'},left,right));
 }
-
-// Initialize UI components
-function initializeUI() {
-  // Initialize simulate time inputs with current date/time
-  const now = new Date();
-  const dateStr = now.toISOString().split('T')[0];
-  const timeStr = now.toTimeString().substring(0, 5);
-  
-  document.getElementById('simulate-date').value = dateStr;
-  document.getElementById('simulate-time').value = timeStr;
-  
-  // Set theme based on system preference if set to auto
-  if (currentSettings.theme === 'auto') {
-    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    document.body.className = prefersDark ? '' : 'light-theme';
-  }
+async function addPlan(start,end,title,sessionIds=[],remind=false){
+  if(settings.plans.length>=50){toast(T('limit'));return false;}if(start<Date.UTC(2000,0,1)||end>=Date.UTC(2101,0,1)||end<=start||end-start>31*86400000){toast(T('invalidRange'));return false;}
+  if(settings.plans.some(p=>p.start===start&&p.end===end&&p.title===title)){toast(T('saved'));return true;}
+  const result=await commit(s=>s.plans.push({id:crypto.randomUUID(),title,start,end,sessionIds,remind}));if(result)toast(T('saved'));return result;
 }
-
-// Set up event listeners for all interactive elements
-function setupEventListeners() {
-  // Tab navigation
-  document.querySelectorAll('.nav-tab').forEach(tab => {
-    tab.addEventListener('click', () => {
-      const tabId = tab.getAttribute('data-tab');
-      
-      // Update active tab
-      document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
-      tab.classList.add('active');
-      
-      // Show corresponding content
-      document.querySelectorAll('.tab-container').forEach(container => {
-        container.classList.remove('active');
-      });
-      
-      document.getElementById(`${tabId}-tab`).classList.add('active');
-      
-      // Update visualizer if selected
-      if (tabId === 'visualizer') {
-        updateVisualizer();
-      }
-    });
-  });
-  
-  // Market search
-  document.getElementById('market-search').addEventListener('input', (e) => {
-    const searchText = e.target.value.toLowerCase();
-    const tableRows = document.querySelectorAll('#market-table-body tr');
-    
-    tableRows.forEach(row => {
-      const marketName = row.querySelector('td:first-child').textContent.toLowerCase();
-      if (marketName.includes(searchText)) {
-        row.style.display = '';
-      } else {
-        row.style.display = 'none';
-      }
-    });
-  });
-  
-  // Reset simulation button
-  document.getElementById('reset-simulation').addEventListener('click', () => {
-    simulationTime = null;
-    
-    // Update current time display
-    updateClock();
-    
-    // Update market table
-    updateMarketTable();
-    
-    // Update visualizer
-    updateVisualizer();
-  });
-  
-  // Theme buttons
-  document.querySelectorAll('.theme-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      currentSettings.theme = btn.dataset.theme;
-      applySettings();
-    });
-  });
-  
-  // Timezone select
-  document.getElementById('timezone-select').addEventListener('change', (e) => {
-    currentSettings.timezone = e.target.value;
-    document.getElementById('timezone-display').textContent = e.target.value;
-    updateClock();
-    updateMarketTable();
-    updateVisualizer();
-  });
-  
-  // Clock format input
-  document.getElementById('clock-format').addEventListener('change', (e) => {
-    currentSettings.clockFormat = e.target.value;
-    updateClock();
-  });
-  
-  // Market hours format buttons
-  document.querySelectorAll('.hours-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      currentSettings.marketHoursFormat = btn.dataset.hours;
-      applySettings();
-    });
-  });
-  
-  // Market mode buttons
-  document.querySelectorAll('.mode-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      currentSettings.marketMode = btn.dataset.mode;
-      applySettings();
-    });
-  });
-  
-  // Market checkboxes
-  document.querySelectorAll('.market-checkbox input').forEach(checkbox => {
-    checkbox.addEventListener('change', () => {
-      const marketName = checkbox.nextElementSibling.textContent;
-      
-      if (checkbox.checked && !currentSettings.selectedMarkets.includes(marketName)) {
-        currentSettings.selectedMarkets.push(marketName);
-      } else if (!checkbox.checked && currentSettings.selectedMarkets.includes(marketName)) {
-        currentSettings.selectedMarkets = currentSettings.selectedMarkets.filter(m => m !== marketName);
-      }
-      
-      updateMarketTable();
-      updateVisualizer();
-    });
-  });
-  
-  // Select/Deselect all markets
-  document.getElementById('select-all-markets').addEventListener('click', () => {
-    const checkboxes = document.querySelectorAll('.market-checkbox input');
-    checkboxes.forEach(checkbox => {
-      checkbox.checked = true;
-    });
-    
-    currentSettings.selectedMarkets = Object.keys(marketData);
-    updateMarketTable();
-    updateVisualizer();
-  });
-  
-  document.getElementById('deselect-all-markets').addEventListener('click', () => {
-    const checkboxes = document.querySelectorAll('.market-checkbox input');
-    checkboxes.forEach(checkbox => {
-      checkbox.checked = false;
-    });
-    
-    currentSettings.selectedMarkets = [];
-    updateMarketTable();
-    updateVisualizer();
-  });
-  
-  // Notification settings
-  document.getElementById('notify-market-open').addEventListener('change', (e) => {
-    currentSettings.notifications = currentSettings.notifications || {};
-    currentSettings.notifications.marketOpen = e.target.checked;
-  });
-  
-  document.getElementById('notify-market-close').addEventListener('change', (e) => {
-    currentSettings.notifications = currentSettings.notifications || {};
-    currentSettings.notifications.marketClose = e.target.checked;
-  });
-  
-  // Save button
-  document.getElementById('save-settings').addEventListener('click', () => {
-    saveSettings();
-  });
-  
-  // Discard button
-  document.getElementById('discard-settings').addEventListener('click', () => {
-    loadSettings();
-  });
-  
-  // Default button
-  document.getElementById('default-settings').addEventListener('click', () => {
-    if (confirm('Are you sure you want to reset all settings to default?')) {
-      currentSettings = { ...defaultSettings };
-      applySettings();
-    }
-  });
-  
-  // Simulate time inputs
-  document.getElementById('simulate-date').addEventListener('change', updateSimulationTime);
-  document.getElementById('simulate-time').addEventListener('change', updateSimulationTime);
+function renderPlanForm(){
+  const current=now(),date=dateKey(current,settings.timezone),parts=zonedParts(current,settings.timezone);const startAt=`${String(parts.hour).padStart(2,'0')}:${String(parts.minute).padStart(2,'0')}`;const endAt=timeInput(current+3600000);
+  const title=field(T('title'),{type:'text',value:T('quickPlan'),maxlength:100,required:true});const fromDate=field(T('startDate'),{type:'date',value:date,required:true}),toDate=field(T('endDate'),{type:'date',value:dateKey(current+3600000,settings.timezone),required:true}),fromTime=field(T('startTime'),{type:'time',value:startAt,required:true}),toTime=field(T('endTime'),{type:'time',value:endAt,required:true});
+  const error=h('p',{class:'input-error',role:'alert'});return card(T('newPlan'),'plus',h('form',{class:'form-stack',onsubmit:async event=>{event.preventDefault();try{const start=wallToInstant(fromDate.input.value,fromTime.input.value,settings.timezone,'reject'),end=wallToInstant(toDate.input.value,toTime.input.value,settings.timezone,'reject');if(end<=start||end-start>31*86400000){error.textContent=T('invalidRange');return;}await addPlan(start,end,title.input.value.trim()||T('quickPlan'));}catch{error.textContent=T('invalidTime');}}},title.node,h('div',{class:'form-grid'},fromDate.node,fromTime.node,toDate.node,toTime.node),h('p',{class:'fine-print'},settings.timezone),error,btn(T('savePlan'),null,'','plus',{type:'submit'})));
 }
-
-// Update simulation time based on inputs
-function updateSimulationTime() {
-  const simulateDate = document.getElementById('simulate-date').value;
-  const simulateTime = document.getElementById('simulate-time').value;
-  
-  if (simulateDate && simulateTime) {
-    simulationTime = new Date(`${simulateDate}T${simulateTime}`);
-    
-    // Update displays
-    updateClock();
-    updateMarketTable();
-    updateVisualizer();
-  }
+function renderChecklist(){const box=card(T('routine'),'check');box.append(h('p',{class:'fine-print',style:'margin-bottom:8px'},T('routineHint')));for(const item of settings.checklist){const key=id('check');box.append(h('div',{class:'checklist-row'},h('input',{type:'checkbox',id:key,checked:item.done,onchange:event=>commit(s=>s.checklist.find(x=>x.id===item.id).done=event.target.checked)}),h('label',{for:key},item.text),iconBtn(T('remove'),'close',()=>commit(s=>s.checklist=s.checklist.filter(x=>x.id!==item.id)))));}const text=field(T('addItem'),{type:'text',maxlength:160,required:true,placeholder:T('addItem')});box.append(h('form',{class:'inline-input',onsubmit:async event=>{event.preventDefault();if(settings.checklist.length>=20){toast(T('limit'));return;}if(text.input.value.trim())await commit(s=>s.checklist.push({id:crypto.randomUUID(),text:text.input.value.trim(),done:false}));}},text.node,btn(T('add'),null,'button-quiet','plus',{type:'submit'})),settings.checklist.length?btn(T('resetChecks'),()=>commit(s=>s.checklist.forEach(x=>x.done=false)),'button-link',null,{style:'margin-top:12px'}):null);const notes=field(T('notes'),{multiline:true,rows:3,maxlength:4000,value:settings.notes,placeholder:T('notesPlaceholder'),onchange:async event=>{if(await commit(s=>s.notes=event.target.value,false))toast(T('saved'));}});box.append(h('hr',{class:'divider'}),notes.node);return box;}
+function timeInput(at){const parts=zonedParts(at,settings.timezone);return `${String(parts.hour).padStart(2,'0')}:${String(parts.minute).padStart(2,'0')}`;}
+function renderTools(){
+  const left=h('div',{class:'stack'}),right=h('div',{class:'stack'});left.append(renderTimeTravel());
+  const compare=card(T('converter'),'globe');compare.append(h('div',{class:'compare-grid'},[['Asia/Tehran',settings.language==='fa'?'تهران':'Tehran'],['Europe/London',name('london')],['America/New_York',name('new-york')]].map(([zone,label])=>h('div',{class:'compare-clock'},h('span',{},label),h('strong',{'data-clock-zone':zone},time(now(),zone)),h('small',{},new Intl.DateTimeFormat(locale(),{timeZone:zone,day:'numeric',month:'short'}).format(now()))))),h('p',{class:'fine-print',style:'margin-top:12px'},day(now()),' · ',settings.timezone));left.append(compare,renderCustom());
+  const dst=card(T('dst'),'clock');dst.append(h('p',{class:'fine-print',style:'margin-bottom:12px'},T('dstHint')));const sessions=allSessions(),key=`${dateKey(now(),settings.timezone)}:${settings.timezone}:${sessions.map(s=>`${s.id}${s.zone}${s.open}`).join()}`;if(dstCache.key!==key)dstCache={key,value:dstChanges(sessions,now(),100,settings.timezone)};const changes=dstCache.value;if(!changes.length)dst.append(empty(T('noDst')));for(const change of changes)dst.append(h('div',{class:'dst-item'},h('div',{class:'dst-title'},h('strong',{},name(sessions.find(s=>s.id===change.sessionId)||change.sessionId)),h('span',{class:'muted'},day(change.at))),h('div',{class:'dst-detail'},`${change.beforeLocal} → ${change.afterLocal} · ${settings.timezone}`)));right.append(dst,renderBroker());return h('div',{class:'wide-layout'},left,right);
 }
-
-// Update the clock display based on current settings
-function updateClock() {
-  const clockElement = document.getElementById('current-time');
-  const now = simulationTime || new Date();
-  
-  // Format the date according to the current format setting
-  // This is a simple implementation - in a production environment, use a library like moment.js
-  const options = { 
-    weekday: 'short', 
-    year: 'numeric', 
-    month: 'short', 
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-    timeZone: currentSettings.timezone,
-    timeZoneName: 'short'
-  };
-  
-  clockElement.textContent = now.toLocaleString('en-US', options);
-  
-  // If simulation is active, add visual indicator
-  if (simulationTime) {
-    clockElement.classList.add('simulated-time');
-  } else {
-    clockElement.classList.remove('simulated-time');
-  }
+function renderTimeTravel(){
+  const date=field(T('day'),{type:'date',value:dateKey(now(),settings.timezone),required:true}),clock=field(T('time'),{type:'time',value:timeInput(now()),required:true});const error=h('p',{class:'input-error',role:'alert'});const explore=()=>{try{const candidate=wallToInstant(date.input.value,clock.input.value,settings.timezone,'compatible');const p=zonedParts(candidate,settings.timezone);const requested=`${date.input.value}T${clock.input.value}`;const actual=`${dateKey(candidate,settings.timezone)}T${String(p.hour).padStart(2,'0')}:${String(p.minute).padStart(2,'0')}`;if(requested!==actual){error.textContent=T('invalidTime');return;}ui.simulation=candidate;render();}catch{error.textContent=T('invalidTime');}};
+  const quick=delta=>{const key=addDays(dateKey(Date.now(),settings.timezone),delta);ui.simulation=wallToInstant(key,timeInput(Date.now()),settings.timezone);render();};const parts=zonedParts(now(),settings.timezone);
+  return card(T('simulation'),'clock',h('form',{class:'form-stack',onsubmit:event=>{event.preventDefault();explore();}},h('div',{class:'form-grid'},date.node,clock.node),h('div',{class:'button-row'},btn(T('today'),()=>quick(0),'button-quiet button-small'),btn(T('tomorrow'),()=>quick(1),'button-quiet button-small'),btn(T('nextWeek'),()=>quick(7),'button-quiet button-small')),h('label',{class:'field-label',for:'travel-slider'},T('time')),h('input',{type:'range',class:'range-control',id:'travel-slider',min:0,max:1439,step:5,value:parts.hour*60+parts.minute,'aria-label':T('time'),oninput:event=>{const minutes=Number(event.target.value);clock.input.value=`${String(Math.floor(minutes/60)).padStart(2,'0')}:${String(minutes%60).padStart(2,'0')}`;},onchange:explore}),h('p',{class:'fine-print'},T('timeHint')),error,btn(T('apply'),null,'','arrow',{type:'submit'})));
 }
-
-// Update the market status table
-function updateMarketTable() {
-  const tableBody = document.getElementById('market-table-body');
-  tableBody.innerHTML = '';
-  
-  // Get current time or simulated time
-  const currentTime = simulationTime || new Date();
-  
-  // Sort markets by opening time
-  const sortedMarkets = [...currentSettings.selectedMarkets].sort((a, b) => {
-    if (!marketData[a] || !marketData[b]) return 0;
-    return marketData[a].open.localeCompare(marketData[b].open);
-  });
-  
-  // Create rows for each selected market
-  sortedMarkets.forEach(marketName => {
-    if (marketData[marketName]) {
-      const market = marketData[marketName];
-      const row = document.createElement('tr');
-      
-      // Get market open/close times
-      const { isOpen, formattedOpenTime, formattedCloseTime } = getMarketStatus(
-        market, 
-        currentTime, 
-        currentSettings.timezone, 
-        currentSettings.marketHoursFormat,
-        currentSettings.marketMode
-      );
-      
-      // Add classes to highlight open markets
-      if (isOpen) {
-        row.classList.add('open-market');
-      }
-      
-      // Create table cells
-      row.innerHTML = `
-        <td>${marketName}</td>
-        <td>${formattedOpenTime}</td>
-        <td>${formattedCloseTime}</td>
-        <td class="${isOpen ? 'status-open' : 'status-closed'}">${isOpen ? 'Open' : 'Close'}</td>
-      `;
-      
-      tableBody.appendChild(row);
-    }
-  });
+function renderCustom(){
+  const box=card(T('custom'),'plus');box.append(h('p',{class:'fine-print',style:'margin-bottom:12px'},T('customHint')));for(const session of settings.customSessions)box.append(h('div',{class:'custom-item'},h('div',{},h('strong',{class:'small'},session.name),h('p',{class:'fine-print'},`${session.open} – ${session.close} · ${session.zone}`)),iconBtn(T('remove'),'close',()=>commit(s=>s.customSessions=s.customSessions.filter(x=>x.id!==session.id)))));
+  const label=field(T('name'),{type:'text',maxlength:60,required:true}),zone=selectField(T('zone'),zones(),settings.timezone),open=field(T('openTime'),{type:'time',value:'08:00',required:true}),close=field(T('closeTime'),{type:'time',value:'17:00',required:true});let days=[1,2,3,4,5];const error=h('p',{class:'input-error',role:'alert'});
+  box.append(h('form',{class:'form-stack',onsubmit:async event=>{event.preventDefault();if(settings.customSessions.length>=12){toast(T('limit'));return;}if(!isValidZone(zone.input.value)){error.textContent=T('invalidZone');return;}await commit(s=>s.customSessions.push({id:`custom-${crypto.randomUUID()}`,name:label.input.value.trim(),zone:zone.input.value,open:open.input.value,close:close.input.value,days,breaks:[],color:'#d3b58d',currencies:[]}));}},label.node,zone.node,h('div',{class:'form-grid'},open.node,close.node),daysPicker(days,value=>days=value),error,btn(T('add'),null,'button-quiet','plus',{type:'submit'})));return box;
 }
-
-// Update the visualizer tab
-function updateVisualizer() {
-  updateTimelineVisualizer();
-  updateOverlapChart();
+function renderBroker(){
+  const broker=settings.broker;const label=field(T('brokerName'),{type:'text',value:broker.name,maxlength:60,required:true}),zone=selectField(T('zone'),zones(),broker.zone),open=field(T('openTime'),{type:'time',value:broker.open,required:true}),close=field(T('closeTime'),{type:'time',value:broker.close,required:true}),breakStart=field(T('rolloverStart'),{type:'time',value:broker.rolloverStart,required:true}),breakEnd=field(T('rolloverEnd'),{type:'time',value:broker.rolloverEnd,required:true});let days=[...broker.days];
+  return card(T('broker'),'clock',h('p',{class:'fine-print'},T('brokerHint')),toggle(T('brokerEnable'),null,broker.enabled,event=>commit(s=>s.broker.enabled=event.target.checked,false)),h('form',{class:'form-stack',onsubmit:async event=>{event.preventDefault();if(await commit(s=>s.broker={enabled:settings.broker.enabled,name:label.input.value.trim(),zone:zone.input.value,open:open.input.value,close:close.input.value,days,rolloverStart:breakStart.input.value,rolloverEnd:breakEnd.input.value}))toast(T('saved'));}},label.node,zone.node,h('div',{class:'form-grid'},open.node,close.node,breakStart.node,breakEnd.node),daysPicker(days,value=>days=value),btn(T('save'),null,'button-quiet','check',{type:'submit'})));
 }
-
-// Update the timeline visualizer
-function updateTimelineVisualizer() {
-  const timelineContainer = document.getElementById('markets-timeline');
-  timelineContainer.innerHTML = '';
-  
-  // Get current time or simulated time
-  const currentTime = simulationTime || new Date();
-  const currentHour = currentTime.getHours();
-  const currentMinute = currentTime.getMinutes();
-  
-  // Update current time marker in visualizer
-  document.getElementById('visualizer-time').textContent = 
-    `${String(currentHour).padStart(2, '0')}:${String(currentMinute).padStart(2, '0')} ${currentSettings.timezone}`;
-  
-  // Calculate current time position (as percentage across the 24-hour timeline)
-  const currentTimePercentage = ((currentHour * 60 + currentMinute) / (24 * 60)) * 100;
-  
-  // Set position of current time marker
-  const timelineMarker = document.getElementById('timeline-current-marker');
-  timelineMarker.style.left = `${currentTimePercentage}%`;
-  
-  // Create timeline rows for each selected market
-  currentSettings.selectedMarkets.forEach(marketName => {
-    if (marketData[marketName]) {
-      const market = marketData[marketName];
-      
-      // Parse open/close hours into minutes from start of day
-      const [openHour, openMinute] = market.open.split(':').map(Number);
-      const [closeHour, closeMinute] = market.close.split(':').map(Number);
-      
-      const openMinutes = openHour * 60 + openMinute;
-      let closeMinutes = closeHour * 60 + closeMinute;
-      
-      // Handle overnight markets
-      if (closeMinutes < openMinutes) {
-        closeMinutes += 24 * 60; // Add 24 hours
-      }
-      
-      // Calculate percentages for positioning
-      const startPercentage = (openMinutes / (24 * 60)) * 100;
-      const endPercentage = (closeMinutes / (24 * 60)) * 100;
-      const width = endPercentage - startPercentage;
-      
-      // Create the market timeline row
-      const marketRow = document.createElement('div');
-      marketRow.className = 'market-timeline-row';
-      
-      marketRow.innerHTML = `
-        <div class="market-timeline-label">${marketName}</div>
-        <div class="market-timeline-bar-container">
-          <div class="market-timeline-bar" style="left: ${startPercentage}%; width: ${width}%;"></div>
-        </div>
-      `;
-      
-      timelineContainer.appendChild(marketRow);
-    }
-  });
+async function allowNotifications(){if(!isExtension){toast(T('previewNotice'));return false;}try{const granted=await chrome.permissions.request({permissions:['notifications']});if(!granted)toast(T('permissionDenied'));return granted;}catch{toast(T('permissionDenied'));return false;}}
+function renderSettings(){
+  const left=h('div',{class:'stack'}),right=h('div',{class:'stack'});const appearance=card(T('appearance'),'sun');appearance.append(h('p',{class:'field-label',style:'margin-bottom:7px'},T('theme')),h('div',{class:'segmented'},['dark','light','auto'].map(theme=>h('button',{type:'button',class:'segment','aria-pressed':settings.theme===theme,onclick:()=>commit(s=>s.theme=theme)},T(theme)))),h('div',{class:'form-grid',style:'margin-top:14px'},selectField(T('language'),[['en','English'],['fa','فارسی']],settings.language,event=>commit(s=>s.language=event.target.value)).node,selectField(T('zone'),zones(),settings.timezone,event=>commit(s=>s.timezone=event.target.value,false)).node),toggle(T('hour12'),null,settings.hour12,event=>commit(s=>s.hour12=event.target.checked,false)),toggle(T('badge'),T('badgeHint'),settings.badge,event=>commit(s=>s.badge=event.target.checked,false)));left.append(appearance);
+  const sessions=card(T('selectSessions'),'radar');sessions.append(h('div',{class:'session-options'},SESSIONS.map(session=>h('label',{class:'session-option'},h('input',{type:'checkbox',checked:settings.selectedSessions.includes(session.id),onchange:event=>commit(s=>s.selectedSessions=event.target.checked?[...new Set([...s.selectedSessions,session.id])]:s.selectedSessions.filter(sid=>sid!==session.id),false)}),name(session)))),h('hr',{class:'divider'}),selectField(T('pair'),Object.keys(PAIRS).map(pair=>[pair,pair==='ALL'?T('allPairs'):pair.replace(/^([A-Z]{3})([A-Z]{3})$/,'$1 / $2')]),settings.pair,event=>commit(s=>s.pair=event.target.value,false)).node,h('p',{class:'pair-note'},T('pairHint')));left.append(sessions);
+  const source=h('details',{class:'source-details'},h('summary',{},T('sources')),h('p',{},T('sourceCopy')),h('p',{},T('sourceClock')),h('p',{},h('a',{href:'https://www.babypips.com/learn/forex/forex-trading-sessions',target:'_blank',rel:'noopener noreferrer'},'Session conventions ↗'),' · ',h('a',{href:'https://www.iana.org/time-zones',target:'_blank',rel:'noopener noreferrer'},'IANA ↗')));left.append(card(T('data'),'shield',h('p',{class:'fine-print'},T('dataHint')),h('hr',{class:'divider'}),source,h('div',{class:'button-row',style:'margin-top:14px'},h('a',{href:'privacy.html',target:'_blank',rel:'noopener',class:'button button-quiet'},T('privacy')),btn(T('erase'),async()=>{if(confirm(T('eraseConfirm')))await eraseLocalData();},'button-danger'))));
+  const alerts=card(T('alerts'),'bell');alerts.id='reminders';alerts.append(toggle(T('enableAlerts'),T('alertHint'),settings.alerts.enabled,async event=>{const enabled=event.target.checked;if(enabled){const granted=await allowNotifications();if(!granted){event.target.checked=false;return;}}await commit(s=>s.alerts.enabled=enabled,false);}));
+  const lead=selectField(T('lead'),[0,5,10,15,30,60].map(value=>[String(value),`${value} ${T('minutes')}`]),String(settings.alerts.leadMinutes),event=>commit(s=>s.alerts.leadMinutes=Number(event.target.value),false));alerts.append(lead.node,toggle(T('openAlert'),null,settings.alerts.open,event=>commit(s=>s.alerts.open=event.target.checked,false)),toggle(T('closeAlert'),null,settings.alerts.close,event=>commit(s=>s.alerts.close=event.target.checked,false)),toggle(T('overlapAlert'),null,settings.alerts.overlap,event=>commit(s=>s.alerts.overlap=event.target.checked,false)),h('div',{class:'field-label',style:'margin:10px 0 7px'},T('days')),daysPicker(settings.alerts.days,value=>commit(s=>s.alerts.days=value,false)),h('hr',{class:'divider'}));
+  const quietStart=field(T('from'),{type:'time',value:settings.alerts.quietStart,required:true}),quietEnd=field(T('to'),{type:'time',value:settings.alerts.quietEnd,required:true});alerts.append(h('form',{class:'form-stack',onsubmit:async event=>{event.preventDefault();if(await commit(s=>{s.alerts.quietStart=quietStart.input.value;s.alerts.quietEnd=quietEnd.input.value;}))toast(T('saved'));}},h('h3',{},T('quiet')),h('div',{class:'form-grid'},quietStart.node,quietEnd.node),h('p',{class:'fine-print'},T('quietHint')),btn(T('save'),null,'button-quiet','check',{type:'submit'})));right.append(alerts);
+  if(!isExtension)right.append(h('div',{class:'notice'},icon('shield'),h('p',{},T('previewNotice'))));
+  right.append(card('AryamerX / 03','external',h('p',{class:'fine-print'},T('reference')),h('div',{class:'button-row',style:'margin-top:14px'},h('a',{class:'button button-quiet',href:'https://aryamerx.com/extensions',target:'_blank',rel:'noopener noreferrer'},T('visitBrand'),icon('external',13)))));return h('div',{class:'wide-layout'},left,right);
 }
-
-// Update the overlap chart
-function updateOverlapChart() {
-  const overlapChart = document.getElementById('overlap-chart');
-  overlapChart.innerHTML = '';
-  
-  // Create hour lines
-  const hourLines = document.createElement('div');
-  hourLines.className = 'hour-lines';
-  
-  for (let hour = 0; hour < 24; hour++) {
-    const hourLine = document.createElement('div');
-    hourLine.className = 'hour-line';
-    hourLine.style.left = `${(hour / 24) * 100}%`;
-    hourLines.appendChild(hourLine);
-  }
-  
-  overlapChart.appendChild(hourLines);
-  
-  // Calculate market overlaps for each hour
-  const hourlyOverlaps = [];
-  
-  for (let hour = 0; hour < 24; hour++) {
-    let marketsOpen = 0;
-    
-    currentSettings.selectedMarkets.forEach(marketName => {
-      if (marketData[marketName]) {
-        const market = marketData[marketName];
-        
-        // Parse open/close hours
-        const [openHour, openMinute] = market.open.split(':').map(Number);
-        const [closeHour, closeMinute] = market.close.split(':').map(Number);
-        
-        // Check if market is open during this hour
-        if (closeHour < openHour) {
-          // Overnight market
-          if (hour >= openHour || hour < closeHour) {
-            marketsOpen++;
-          }
-        } else {
-          // Regular market
-          if (hour >= openHour && hour < closeHour) {
-            marketsOpen++;
-          }
-        }
-      }
-    });
-    
-    hourlyOverlaps.push(marketsOpen);
-  }
-  
-  // Create overlap bars
-  const maxOverlap = Math.max(...hourlyOverlaps, 1);
-  const barWidth = 100 / 24;
-  
-  for (let hour = 0; hour < 24; hour++) {
-    const overlap = hourlyOverlaps[hour];
-    const height = (overlap / maxOverlap) * 100;
-    
-    let colorClass = 'overlap-low';
-    if (overlap >= maxOverlap * 0.7) {
-      colorClass = 'overlap-high';
-    } else if (overlap >= maxOverlap * 0.4) {
-      colorClass = 'overlap-medium';
-    }
-    
-    const overlapBar = document.createElement('div');
-    overlapBar.className = `overlap-bar ${colorClass}`;
-    overlapBar.style.left = `${hour * barWidth}%`;
-    overlapBar.style.width = `${barWidth}%`;
-    overlapBar.style.height = `${height}%`;
-    
-    if (overlap > 0) {
-      overlapBar.textContent = overlap;
-    }
-    
-    overlapChart.appendChild(overlapBar);
-  }
-}
-
-// Helper function to determine if a market is open and format the times
-function getMarketStatus(market, currentTime, timezone, format, mode) {
-  // Parse market hours
-  const [openHour, openMinute] = market.open.split(':').map(Number);
-  const [closeHour, closeMinute] = market.close.split(':').map(Number);
-  
-  // Create Date objects for market open and close times
-  const marketOpenTime = new Date(currentTime);
-  marketOpenTime.setHours(openHour, openMinute, 0, 0);
-  
-  const marketCloseTime = new Date(currentTime);
-  marketCloseTime.setHours(closeHour, closeMinute, 0, 0);
-  
-  // Handle overnight markets (close time is earlier than open time)
-  if (marketCloseTime < marketOpenTime) {
-    marketCloseTime.setDate(marketCloseTime.getDate() + 1);
-  }
-  
-  // Check if market is currently open
-  const isOpen = currentTime >= marketOpenTime && currentTime < marketCloseTime;
-  
-  // Format the times based on user preference
-  let formattedOpenTime = formatTime(openHour, openMinute, format);
-  let formattedCloseTime = formatTime(closeHour, closeMinute, format);
-  
-  return {
-    isOpen,
-    formattedOpenTime,
-    formattedCloseTime
-  };
-}
-
-// Format time according to user preference
-function formatTime(hours, minutes, format) {
-  if (format === '12h') {
-    const period = hours >= 12 ? 'PM' : 'AM';
-    const displayHours = hours % 12 || 12;
-    return `${displayHours}:${minutes.toString().padStart(2, '0')} ${period}`;
-  } else {
-    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
-  }
-}
-
-// Check if we need to send notifications
-setInterval(() => {
-  if (!currentSettings.notifications) return;
-  if (!currentSettings.notifications.marketOpen && !currentSettings.notifications.marketClose) return;
-  
-  // Only check with real time, not simulation
-  if (simulationTime) return;
-  
-  const now = new Date();
-  const currentMinute = now.getHours() * 60 + now.getMinutes();
-  
-  currentSettings.selectedMarkets.forEach(marketName => {
-    if (marketData[marketName]) {
-      const market = marketData[marketName];
-      
-      // Parse open/close times
-      const [openHour, openMinute] = market.open.split(':').map(Number);
-      const [closeHour, closeMinute] = market.close.split(':').map(Number);
-      
-      const openMinuteOfDay = openHour * 60 + openMinute;
-      const closeMinuteOfDay = closeHour * 60 + closeMinute;
-      
-      // Check for market opening
-      if (currentSettings.notifications.marketOpen && 
-          currentMinute === openMinuteOfDay) {
-        showNotification(
-          'Market Opening', 
-          `${marketName} market is now open`
-        );
-      }
-      
-      // Check for market closing
-      if (currentSettings.notifications.marketClose && 
-          currentMinute === closeMinuteOfDay) {
-        showNotification(
-          'Market Closing', 
-          `${marketName} market is now closing`
-        );
-      }
-    }
-  });
-}, 60000); // Check every minute
-
-// Function to show notifications
-function showNotification(title, message) {
-  // Check if the browser supports notifications
-  if ('Notification' in window) {
-    // Check if permission is already granted
-    if (Notification.permission === 'granted') {
-      new Notification(title, { 
-        body: message,
-        icon: 'icons/icon128.png'
-      });
-    }
-    // Otherwise, ask for permission
-    else if (Notification.permission !== 'denied') {
-      Notification.requestPermission().then(permission => {
-        if (permission === 'granted') {
-          new Notification(title, {
-            body: message,
-            icon: 'icons/icon128.png'
-          });
-        }
-      });
-    }
-  }
-  
-  // Fallback to alert if notifications aren't available or permitted
-  if (Notification.permission !== 'granted') {
-    alert(`${title}: ${message}`);
-  }
-}
+function downloadPlans(plans){try{const blob=new Blob([createCalendar(plans)],{type:'text/calendar;charset=utf-8'}),url=URL.createObjectURL(blob);const link=h('a',{href:url,download:'aryamerx-session-plans.ics'});document.body.append(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),10000);}catch{toast(T('invalidRange'));}}
+async function copyTimes(plan){const zones=[...new Set([settings.timezone,'Europe/London','America/New_York'])];const text=[plan.title,...zones.map(zone=>{const formatter=new Intl.DateTimeFormat('en-GB',{timeZone:zone,year:'numeric',month:'short',day:'numeric'});return `${formatter.format(plan.start)} ${time(plan.start,zone)} – ${formatter.format(plan.end)} ${time(plan.end,zone)} · ${zone}`;}),'AryamerX Financial Clock · reference schedule'].join('\n');try{await navigator.clipboard.writeText(text);toast(T('copied'));}catch{toast(T('copyError'));}}
+async function boot(){try{settings=await loadSettings();if(isExtension){const currentWindow=await chrome.windows.getCurrent();currentWindowId=currentWindow.id;}lastMinute=Math.floor(now()/60000);render();matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>{if(settings.theme==='auto')render();});setInterval(()=>{tick();const minute=Math.floor(now()/60000);if(minute!==lastMinute&&ui.tab==='overview'&&!['INPUT','TEXTAREA','SELECT'].includes(document.activeElement.tagName)){lastMinute=minute;render();}},1000);if(isExtension)chrome.storage.onChanged.addListener(async(changes,area)=>{if(area==='local'&&changes[STORAGE_KEY]&&!pendingWrites){const next=await loadSettings();if(JSON.stringify(next)!==JSON.stringify(settings)){settings=next;if(ui.tab==='overview')render();}}});}catch(error){console.error('Unable to start local clock',error);document.getElementById('app').replaceChildren(h('div',{class:'card',style:'margin:20px'},h('h1',{},'Financial Clock'),h('p',{},'Local settings could not be loaded. Reload this page or reinstall the extension.')));}}
+boot();

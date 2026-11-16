@@ -1,109 +1,65 @@
-# Forex Market Time Tracker Chrome Extension
+# AryamerX Financial Clock 3.0.0
 
-A Chrome extension that displays forex market opening and closing times across major financial centers worldwide. Easily track when different markets are open and configure various display options to suit your needs.
+A free, offline Chrome extension for understanding reference forex sessions and planning personal time around them. It uses Manifest V3, plain JavaScript, native browser time-zone rules and local storage, with no runtime dependencies or online data feeds.
+
+## Interface
+
+- A compact 420-pixel toolbar popup shows the next event, local clock and selected sessions.
+- **Open workspace** launches the full dashboard in a separate extension tab for planning and settings.
+- The same responsive dashboard can be opened in Chrome's side panel alongside a website.
+- English/Persian, RTL/LTR, dark/light/system themes and 12/24-hour clocks are included.
+- The interface and extension icon use the original supplied AryamerX logo.
 
 ## Features
 
-- Real-time display of forex market hours and status
-- Support for multiple financial centers (Sydney, Tokyo, Shanghai, Hong Kong, Mumbai, Frankfurt, London, New York)
-- Customizable timezone settings
-- Light, dark, and auto themes
-- 12/24-hour time format options
-- Ability to simulate different times to check market status
-- Customizable market selection
-- Persistent settings that save between sessions
+1. Date-aware regional session schedules and a 24/48-hour timeline.
+2. Exact session overlaps and next-event countdowns.
+3. Weekly availability matching and saved personal plans.
+4. Date/time simulation with a clear return to the present.
+5. Upcoming daylight-saving changes in session and display time zones.
+6. Optional local reminders with lead time, weekdays, quiet hours and snoozing.
+7. A persistent Chrome side panel.
+8. Toolbar badge with active-session count or time to the next session.
+9. Custom recurring schedules and a manual broker schedule with a daily break.
+10. Local calendar-file export and multi-zone text copying.
+11. Reference weekly opening/closing and configured rollover context.
+12. Currency-pair session presets.
+13. A preparation checklist and note stored on the device.
 
-## Installation
+Reference schedules are planning conventions, not live broker status, prices, liquidity or an exchange-holiday calendar. Calculations depend on the device clock and Chrome's time-zone rules. No account, subscription, telemetry service or API key is used. External links open only when clicked.
 
-### From Source Code
+## Install for development
 
-1. Clone or download this repository to your local machine
-2. Open Google Chrome and navigate to `chrome://extensions/`
-3. Enable "Developer mode" using the toggle in the top-right corner
-4. Click "Load unpacked" and select the folder containing the extension files
-5. The extension should now appear in your extensions list
-6. Click the extension icon in your browser toolbar to open the interface
+1. Open `chrome://extensions/` in Chrome 116 or later.
+2. Enable **Developer mode**, choose **Load unpacked**, and select this project directory.
+3. Pin the extension and open its popup. Use **Open workspace** for the full interface.
 
-## Usage
+Settings and planning data use `chrome.storage.local`. Supported old preferences can be read once from Chrome Sync during migration; version 3 does not write to Sync. **Settings → Erase local data** removes local personal content and retains a migration marker to prevent old settings from returning.
 
-### Main Panel
+Notifications are disabled by default and require optional permission when enabled. Chrome closure, sleep and operating-system settings can prevent or delay delivery.
 
-The main panel displays:
-- Current date and time in your selected timezone
-- A table showing opening and closing times for selected financial markets
-- The current status of each market (Open/Closed)
-- A simulation tool to check market status at different times
+## Validate and package
 
-### Settings Panel
-
-Click the gear icon (⚙️) to access settings:
-
-- **Theme**: Choose between Light, Dark, or Auto (follows system preference)
-- **Timezone**: Select your preferred timezone for date/time display
-- **Clock Format**: Customize the format of the displayed time
-- **Market Hours Format**: Choose between 12-hour or 24-hour time format
-- **Market Mode**: Choose between standard stock exchange hours or 8 AM to 5 PM
-- **Markets**: Select which financial centers to display in the table
-- **Save/Discard/Default**: Buttons to manage your settings
-
-## Customization
-
-### Adding More Timezones
-
-To add more timezone options:
-1. Open `popup.html`
-2. Find the `<select id="timezone-select">` element
-3. Add new `<option>` tags with the desired timezone values
-
-### Modifying Market Hours
-
-To change the opening/closing times for markets:
-1. Open `popup.js`
-2. Find the `marketData` object at the top of the file
-3. Modify the `open` and `close` values for any market
-
-## Files Overview
-
-- `manifest.json`: Extension configuration
-- `popup.html`: Main user interface
-- `popup.js`: Core functionality and market data
-- `styles.css`: Styling for light and dark themes
-- `background.js`: Background initialization and event handling
-- `icons/`: Extension icons in various sizes
-
-## Folder Structure
-
-```
-forex-market-time/
-├── manifest.json
-├── popup.html
-├── popup.js
-├── styles.css
-├── background.js
-└── icons/
-    ├── icon16.png
-    ├── icon48.png
-    └── icon128.png
+```sh
+npm test
+npm run package
 ```
 
-## Creating Icons
+No dependency installation or bundler is required. Packaging uses Node's standard library and the system `zip`/`unzip` utilities. The upload archive is `dist/aryamerx-financial-clock-3.0.0.zip`, with the manifest at its root and only explicitly allowlisted runtime files.
 
-For the extension to display properly, you'll need to create icon files in the following sizes:
-- 16x16 pixels (icon16.png)
-- 48x48 pixels (icon48.png)
-- 128x128 pixels (icon128.png)
+## Release materials
 
-Place these files in an `icons` folder within your extension directory.
+- [Release and validation record](docs/RELEASE-v3.md)
+- [Persian upload guide](docs/UPLOAD-v3-fa.md)
+- [English/Persian store copy and permission justifications](docs/STORE-LISTING-v3.md)
+- [Privacy policy](PRIVACY.md), also bundled as `privacy.html`
+- [Research and feature strategy](docs/research/financial-clock-v3-strategy-fa.md)
+- [Historical audit of the original local version](docs/research/financial-clock-v3-code-audit-fa.md)
 
-## Contributing
+The release record distinguishes automated tests and browser-page previews from installed-extension verification and store publication. Real desktop notification delivery is scheduled for post-publication testing at the user's request.
 
-Contributions are welcome! Feel free to submit pull requests with improvements or additional features.
+## Source layout
 
-## License
+`lib/engine.js` owns time calculations; `lib/store.js` validates and migrates data; `lib/calendar.js` generates calendar exports; `background.js` handles alarms, badges and optional notifications; `popup.js` renders both popup and dashboard. Runtime HTML, styles and the logo are bundled locally. Tests and release documents stay outside the store archive.
 
-This project is licensed under the MIT License - see the LICENSE file for details.
-
-## Acknowledgments
-
-- This extension was inspired by the need for traders to quickly check market hours across different time zones
-- Special thanks to all who contributed ideas and feedback
+MIT license; see [LICENSE](LICENSE).
