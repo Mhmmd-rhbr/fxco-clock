@@ -1,4 +1,4 @@
-# AryamerX Financial Clock 3.0.0
+# AryamerX Financial Clock 3.1.0
 
 A free, offline Chrome extension for understanding reference forex sessions and planning personal time around them. It uses Manifest V3, plain JavaScript, native browser time-zone rules and local storage, with no runtime dependencies or online data feeds.
 
@@ -8,7 +8,7 @@ A free, offline Chrome extension for understanding reference forex sessions and 
 - **Open workspace** launches the full dashboard in a separate extension tab for planning and settings.
 - The same responsive dashboard can be opened in Chrome's side panel alongside a website.
 - English/Persian, RTL/LTR, dark/light/system themes and 12/24-hour clocks are included.
-- The interface and extension icon use the original supplied AryamerX logo.
+- The interface and extension icons use small PNG exports of the original AryamerX logo.
 
 ## Features
 
@@ -45,10 +45,11 @@ npm test
 npm run package
 ```
 
-No dependency installation or bundler is required. Packaging uses Node's standard library and the system `zip`/`unzip` utilities. The upload archive is `dist/aryamerx-financial-clock-3.0.0.zip`, with the manifest at its root and only explicitly allowlisted runtime files.
+No dependency installation or bundler is required. Packaging uses Node.js 22.2+ and the system `zip`/`unzip` utilities. The upload archive is `dist/aryamerx-financial-clock-3.1.0.zip`, with the manifest at its root and only explicitly allowlisted runtime files. The package command validates each PNG's exact dimensions and compressed pixel data, then checks the ZIP's integrity.
 
 ## Release materials
 
+- [Version 3.1.0 installation fix and upload notes](docs/RELEASE-v3.1.md)
 - [Release and validation record](docs/RELEASE-v3.md)
 - [Persian upload guide](docs/UPLOAD-v3-fa.md)
 - [English/Persian store copy and permission justifications](docs/STORE-LISTING-v3.md)

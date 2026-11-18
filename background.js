@@ -141,7 +141,7 @@ async function deliver(item, state, sessions, settings, now) {
   const content = noticeContent(item, sessions, settings, now);
   const notificationId = `amxClockV3:${item.id}`.slice(0, 320);
   try {
-    await api(chrome.notifications, 'create', notificationId, { type: 'basic', iconUrl: 'assets/logoamx.png', title: content.title,
+    await api(chrome.notifications, 'create', notificationId, { type: 'basic', iconUrl: 'assets/icons/icon-128.png', title: content.title,
       message: content.message, priority: 0, buttons: [{ title: content.snooze }] });
     state.sent[item.id] = now;
     state.lastNotice = item;

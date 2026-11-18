@@ -1,7 +1,7 @@
 # Privacy policy — AryamerX Financial Clock
 
 Effective date: 16 November 2026  
-Applies to extension version: 3.0.0
+Applies to extension versions: 3.0.0 and 3.1.0
 
 AryamerX Financial Clock is a free tool for viewing reference market sessions and planning personal time around them. Its core functions run in the browser without an account, a subscription, or a connection to a broker.
 

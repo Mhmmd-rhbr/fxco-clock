@@ -1,0 +1,63 @@
+Plan your time around the forex sessions you follow.
+
+AryamerX Financial Clock brings reference session schedules, time-zone comparisons and personal planning into one free, offline workspace. Check the next session event from the compact toolbar popup, open the full workspace to plan ahead, or keep the side panel beside your current webpage.
+
+SESSION TIMES AND OVERLAPS
+
+- Follow reference sessions for Sydney, Tokyo, Frankfurt, London and New York in your chosen time zone.
+- See which sessions are active according to their schedules, with countdowns to upcoming session and overlap events.
+- Compare session overlaps and explore a 24- or 48-hour timeline.
+- View reference weekly opening and closing times.
+
+PLAN AROUND YOUR AVAILABILITY
+
+- Set your available weekdays and hours to find matching session windows over the next seven days.
+- Save personal plans or create your own date-and-time ranges, including plans that cross midnight.
+- Keep a preparation checklist and note for the session ahead.
+- Export plans as calendar files or copy their times in multiple time zones.
+
+EXPLORE TIME AND CUSTOM SCHEDULES
+
+- Simulate another date and time, then return to the present with one click.
+- Compare the same moment across cities and review upcoming daylight-saving changes.
+- Add custom recurring schedules or configure a manual broker schedule with a daily break.
+- Use currency-pair presets to focus the session display.
+
+CHOOSE HOW YOU USE IT
+
+- Compact toolbar popup for a quick check.
+- Full workspace in a separate tab for planning and settings.
+- Chrome side panel to keep the workspace visible while browsing.
+- Optional toolbar badge showing active-session count or time to the next session.
+- English and Persian interfaces, right-to-left layout, light/dark/system appearance, and 12- or 24-hour clocks.
+
+OPTIONAL REMINDERS
+
+Enable local Chrome notifications for selected session events, overlaps and saved plans. Choose lead times, weekdays and quiet hours, and snooze a reminder when needed. Notification permission is optional; clocks, planning and exports work without it.
+
+Notifications can display session names, times and titles you enter for your plans. Chrome closure, device sleep and operating-system settings may delay or prevent delivery.
+
+FREE, OFFLINE AND LOCAL
+
+No account, subscription or API key is required. Session calculations run on your device using bundled schedules and Chrome's time-zone rules. The extension does not fetch live prices, news or economic calendars, and it includes no advertising, analytics services or remote executable code.
+
+Version 3 stores preferences, availability, plans, custom schedules, checklist items, notes and reminder records in your Chrome profile's local extension storage. It does not send this content to AryamerX or analytics services, and it does not read website content or browsing history.
+
+To preserve supported older settings, version 3 may read legacy preferences once from Chrome Sync. It does not write new data to Sync. Older synchronized copies may remain in Chrome.
+
+Settings > Erase local data resets local personal content and retains migration/reset markers to prevent old settings from returning. Exported files, copied text, operating-system notification history and older Chrome Sync copies are separate.
+
+External brand and reference links open only when you choose them.
+
+GET STARTED
+
+1. Open the extension and choose Open workspace.
+2. Select your time zone and the sessions you want to follow.
+3. Add your availability or save a personal plan.
+4. Enable reminders only if you want notifications.
+
+ABOUT THE SCHEDULES
+
+Session windows are reference conventions for time planning. They are not live broker availability, official stock-exchange hours, an exchange-holiday calendar or a measurement of current liquidity. Currency-pair presets are time filters, not trading signals. Custom broker hours are entered manually and do not connect to a trading account.
+
+Check your broker's published hours for the instruments you use. Calculations depend on your device clock and the time-zone rules supplied by Chrome.

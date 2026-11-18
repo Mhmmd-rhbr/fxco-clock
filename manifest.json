@@ -1,21 +1,21 @@
 {
   "manifest_version": 3,
   "name": "AryamerX Financial Clock — Session Planner",
-  "version": "3.0.0",
+  "version": "3.1.0",
   "description": "Plan forex sessions, compare time zones, follow overlaps and set local reminders. Works offline. No account or data feeds.",
   "minimum_chrome_version": "116",
   "author": "AryamerX",
   "icons": {
-    "16": "assets/logoamx.png",
-    "48": "assets/logoamx.png",
-    "128": "assets/logoamx.png"
+    "16": "assets/icons/icon-16.png",
+    "32": "assets/icons/icon-32.png",
+    "48": "assets/icons/icon-48.png",
+    "128": "assets/icons/icon-128.png"
   },
   "action": {
     "default_popup": "popup.html",
     "default_icon": {
-      "16": "assets/logoamx.png",
-      "48": "assets/logoamx.png",
-      "128": "assets/logoamx.png"
+      "16": "assets/icons/icon-16.png",
+      "32": "assets/icons/icon-32.png"
     },
     "default_title": "AryamerX Financial Clock"
   },

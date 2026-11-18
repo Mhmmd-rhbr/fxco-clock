@@ -6,13 +6,16 @@ import { copyFileSync, existsSync, lstatSync, mkdirSync, mkdtempSync, readFileSy
 import { tmpdir } from 'node:os';
 import { dirname, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { validateReleasePng } from './release-png.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const manifest = JSON.parse(readFileSync(join(root, 'manifest.json'), 'utf8'));
-if (manifest.manifest_version !== 3 || manifest.version !== '3.0.0') {
-  throw new Error('Packaging expects Manifest V3 and extension version 3.0.0.');
+const packageInfo = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'));
+if (manifest.manifest_version !== 3 || manifest.version !== packageInfo.version) {
+  throw new Error('Packaging expects Manifest V3 and matching manifest/package versions.');
 }
 
+const iconSizes = new Map([16, 32, 48, 128].map(size => [`assets/icons/icon-${size}.png`, size]));
 const files = [
   'manifest.json',
   'popup.html',
@@ -24,7 +27,7 @@ const files = [
   'lib/engine.js',
   'lib/store.js',
   'lib/calendar.js',
-  'assets/logoamx.png',
+  ...iconSizes.keys(),
   'PRIVACY.md',
   'LICENSE',
 ];
@@ -49,31 +52,19 @@ for (const file of manifestPaths) {
   if (!files.includes(file)) throw new Error(`Manifest references a file outside the runtime allowlist: ${file}`);
 }
 
-// One original logo may serve several declared Chrome icon sizes without copies.
-const iconFiles = new Map();
+if (iconSizes.get(manifest.icons?.['128']) !== 128) throw new Error('Missing 128 × 128 installation icon.');
 for (const declarations of [manifest.icons ?? {}, manifest.action?.default_icon ?? {}]) {
   for (const [declaredSize, file] of Object.entries(declarations)) {
-    const size = Number(declaredSize);
-    if (!Number.isInteger(size) || size <= 0) throw new Error(`Invalid declared icon size: ${declaredSize}`);
-    if (!iconFiles.has(file)) iconFiles.set(file, new Set());
-    iconFiles.get(file).add(size);
-  }
-}
-for (const [file, declaredSizes] of iconFiles) {
-  const bytes = readFileSync(join(root, file));
-  const pngMagic = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]);
-  if (bytes.length < 24 || !bytes.subarray(0, 8).equals(pngMagic) || bytes.toString('ascii', 12, 16) !== 'IHDR') {
-    throw new Error(`${file} is not a valid PNG header.`);
-  }
-  const width = bytes.readUInt32BE(16), height = bytes.readUInt32BE(20);
-  const sizes = [...declaredSizes].sort((a, b) => a - b);
-  for (const size of sizes) {
-    if (width < size || height < size) {
-      throw new Error(`${file} is ${width} × ${height}; the declared ${size} × ${size} icon must not be undersized.`);
+    if (String(iconSizes.get(file)) !== declaredSize) {
+      throw new Error(`Invalid icon declaration: ${declaredSize} → ${file}`);
     }
   }
-  if (sizes.some(size => width !== size || height !== size)) {
-    console.warn(`Icon notice: ${file} is ${width} × ${height}; Chrome scales the original artwork for declared sizes ${sizes.join(', ')}.`);
+}
+
+for (const file of files.filter(name => /\.(css|html|js)$/.test(name))) {
+  const source = readFileSync(join(root, file), 'utf8');
+  for (const [, asset] of source.matchAll(/["'](assets\/[^"'\s]+)["']/g)) {
+    if (!files.includes(asset)) throw new Error(`Missing packaged asset ${asset} referenced by ${file}.`);
   }
 }
 
@@ -98,7 +89,7 @@ const staging = mkdtempSync(join(tmpdir(), 'aryamerx-clock-package-'));
 try {
   const sourceDir = join(staging, 'extension');
   // Stable ZIP timestamps and sorted entries make repeated packaging reproducible.
-  const timestamp = new Date('2026-11-16T00:00:00.000Z');
+  const timestamp = new Date('2026-11-18T00:00:00.000Z');
   for (const file of files) {
     const destination = join(sourceDir, file);
     mkdirSync(dirname(destination), { recursive: true });
@@ -107,9 +98,13 @@ try {
   }
   const temporaryArchive = join(staging, 'extension.zip');
   execFileSync('/usr/bin/zip', ['-X', '-9', '-q', temporaryArchive, ...files], { cwd: sourceDir });
+  execFileSync('/usr/bin/unzip', ['-tq', temporaryArchive]);
   const archiveEntries = execFileSync('/usr/bin/unzip', ['-Z', '-1', temporaryArchive], { encoding: 'utf8' }).trim().split('\n').sort();
   if (JSON.stringify(archiveEntries) !== JSON.stringify(files)) {
     throw new Error('ZIP contents differ from the runtime allowlist.');
+  }
+  for (const [file, size] of iconSizes) {
+    validateReleasePng(execFileSync('/usr/bin/unzip', ['-p', temporaryArchive, file]), size, file);
   }
   const archiveData = readFileSync(temporaryArchive);
   const destinationDir = join(root, 'dist');
